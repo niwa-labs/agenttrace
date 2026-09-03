@@ -1,0 +1,103 @@
+/**
+ * Distill pipeline: discover → parse → group/chain → render → write traces.
+ */
+
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { discoverClaudeSessions } from "../sources/claude/discover.js";
+import { parseClaudeSession } from "../sources/claude/parse.js";
+import { discoverCodexSessions } from "../sources/codex/discover.js";
+import { parseCodexSession } from "../sources/codex/parse.js";
+import { distill, DEFAULT_DISTILL_OPTIONS } from "../base/trace-builder.js";
+import type { ChainOptions } from "../base/chain.js";
+import { renderTraceMd } from "../base/render-md.js";
+import { traceFileName } from "../base/naming.js";
+import type { NormalizedSession, SourceKind } from "../model/session.js";
+
+export interface DistillRunOptions {
+	rootDir: string;
+	outDir: string;
+	sources: SourceKind[];
+	chain: ChainOptions;
+}
+
+export interface TraceReportEntry {
+	file: string;
+	kind: string;
+	sessions: number;
+	toolCalls: number;
+	tokensOriginal: number;
+	tokensTrace: number;
+	ratio: number;
+	verdict: string;
+}
+
+export interface DistillReport {
+	rootDir: string;
+	outDir: string;
+	logsScanned: number;
+	logsParsed: number;
+	traces: TraceReportEntry[];
+}
+
+export async function runDistill(opts: DistillRunOptions): Promise<DistillReport> {
+	const logFiles: { file: string; source: SourceKind }[] = [];
+	if (opts.sources.includes("claude")) {
+		for (const f of await discoverClaudeSessions(opts.rootDir)) logFiles.push({ file: f, source: "claude" });
+	}
+	if (opts.sources.includes("codex")) {
+		for (const f of await discoverCodexSessions(opts.rootDir)) logFiles.push({ file: f, source: "codex" });
+	}
+
+	const sessions: NormalizedSession[] = [];
+	for (const { file, source } of logFiles) {
+		try {
+			sessions.push(source === "claude" ? await parseClaudeSession(file) : await parseCodexSession(file));
+		} catch (err) {
+			console.warn(`warn: failed to parse ${file}: ${err instanceof Error ? err.message : String(err)}`);
+		}
+	}
+
+	const traces = distill(sessions, {
+		projectDir: opts.rootDir,
+		chain: opts.chain,
+	});
+
+	await mkdir(opts.outDir, { recursive: true });
+	const report: TraceReportEntry[] = [];
+	const usedNames = new Set<string>();
+	for (const trace of traces) {
+		const md = renderTraceMd(trace);
+		const base = traceFileName(trace.sessions, trace.sessions[0]?.title);
+		// distinct traces can produce the same name (same day, same slug) — keep both
+		let name = base;
+		let n = 2;
+		while (usedNames.has(name)) {
+			name = base.replace(/\.md$/, `-${n}.md`);
+			n++;
+		}
+		usedNames.add(name);
+		const file = join(opts.outDir, name);
+		await writeFile(file, md, "utf8");
+		report.push({
+			file,
+			kind: trace.meta.kind,
+			sessions: trace.sessions.length,
+			toolCalls: trace.meta.stats.toolCalls,
+			tokensOriginal: trace.meta.stats.approxTokensOriginal,
+			tokensTrace: trace.meta.stats.approxTokensTrace,
+			ratio: trace.meta.stats.compressionRatio,
+			verdict: trace.meta.verdict.status,
+		});
+	}
+
+	return {
+		rootDir: opts.rootDir,
+		outDir: opts.outDir,
+		logsScanned: logFiles.length,
+		logsParsed: sessions.length,
+		traces: report,
+	};
+}
+
+export const RUN_DEFAULTS = DEFAULT_DISTILL_OPTIONS;

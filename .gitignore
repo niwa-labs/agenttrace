@@ -1,0 +1,11 @@
+node_modules/
+dist/
+traces/
+traces-v2/
+*.tsbuildinfo
+
+# sidecar files are generated next to source logs
+*.pass1.jsonl
+
+# bank is generated output
+traces/*/bank/
