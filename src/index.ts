@@ -122,11 +122,13 @@ async function main(): Promise<void> {
 		const outDir = resolve(str(values["out"]) ?? join(rootDir, "traces"));
 		const sources = parseSources(str(values["source"]) ?? "claude,codex");
 		const chainGap = num(values["chain-gap"]) ?? 45;
+		const only = str(values["only"]);
 		const report = await runDistill({
 			rootDir,
 			outDir,
 			sources,
 			chain: { enabled: values["no-chain"] !== true, tightGapMinutes: 5, looseGapMinutes: chainGap },
+			...(only !== undefined ? { only } : {}),
 		});
 		console.log(`просмотрено логов: ${report.logsScanned}, распарсено: ${report.logsParsed}`);
 		console.log(`трейсов: ${report.traces.length} → ${outDir}`);

@@ -4,10 +4,12 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { discoverClaudeSessions } from "../sources/claude/discover.js";
+import { discoverClaudeSessions, DEFAULT_CLAUDE_PROJECTS_DIR } from "../sources/claude/discover.js";
 import { parseClaudeSession } from "../sources/claude/parse.js";
 import { discoverCodexSessions } from "../sources/codex/discover.js";
 import { parseCodexSession } from "../sources/codex/parse.js";
+import { discoverPiSessions, DEFAULT_PI_SESSIONS_DIR } from "../sources/pi/discover.js";
+import { parsePiSession } from "../sources/pi/parse.js";
 import { distill, DEFAULT_DISTILL_OPTIONS } from "../base/trace-builder.js";
 import type { ChainOptions } from "../base/chain.js";
 import { renderTraceMd } from "../base/render-md.js";
@@ -19,6 +21,11 @@ export interface DistillRunOptions {
 	outDir: string;
 	sources: SourceKind[];
 	chain: ChainOptions;
+	/** substring filter on log path, applied before parsing (mirrors refine) */
+	only?: string;
+	/** overrides for tests / non-default install locations */
+	claudeProjectsDir?: string;
+	piSessionsDir?: string;
 }
 
 export interface TraceReportEntry {
@@ -43,16 +50,29 @@ export interface DistillReport {
 export async function runDistill(opts: DistillRunOptions): Promise<DistillReport> {
 	const logFiles: { file: string; source: SourceKind }[] = [];
 	if (opts.sources.includes("claude")) {
-		for (const f of await discoverClaudeSessions(opts.rootDir)) logFiles.push({ file: f, source: "claude" });
+		for (const f of await discoverClaudeSessions(opts.rootDir, opts.claudeProjectsDir ?? DEFAULT_CLAUDE_PROJECTS_DIR))
+			logFiles.push({ file: f, source: "claude" });
 	}
 	if (opts.sources.includes("codex")) {
 		for (const f of await discoverCodexSessions(opts.rootDir)) logFiles.push({ file: f, source: "codex" });
 	}
+	if (opts.sources.includes("pi")) {
+		for (const f of await discoverPiSessions(opts.rootDir, opts.piSessionsDir ?? DEFAULT_PI_SESSIONS_DIR))
+			logFiles.push({ file: f, source: "pi" });
+	}
+	const only = opts.only;
+	const picked = only !== undefined ? logFiles.filter((f) => f.file.includes(only)) : logFiles;
 
 	const sessions: NormalizedSession[] = [];
-	for (const { file, source } of logFiles) {
+	for (const { file, source } of picked) {
 		try {
-			sessions.push(source === "claude" ? await parseClaudeSession(file) : await parseCodexSession(file));
+			sessions.push(
+				source === "claude"
+					? await parseClaudeSession(file)
+					: source === "codex"
+						? await parseCodexSession(file)
+						: await parsePiSession(file),
+			);
 		} catch (err) {
 			console.warn(`warn: failed to parse ${file}: ${err instanceof Error ? err.message : String(err)}`);
 		}
@@ -94,7 +114,7 @@ export async function runDistill(opts: DistillRunOptions): Promise<DistillReport
 	return {
 		rootDir: opts.rootDir,
 		outDir: opts.outDir,
-		logsScanned: logFiles.length,
+		logsScanned: picked.length,
 		logsParsed: sessions.length,
 		traces: report,
 	};

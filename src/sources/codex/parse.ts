@@ -32,10 +32,12 @@ export async function parseCodexSession(file: string): Promise<NormalizedSession
 	let endedAt = "";
 	let lastLine = 0;
 	const usage = emptyUsage();
-	/** cumulative totals from the latest token_count event */
-	let totals: { input: number; output: number; cached: number } | undefined;
+	/** cumulative totals from the latest token_count event (baseline for deltas) */
+	let prevTotals: { input: number; output: number; cached: number } | undefined;
 	/** call_id → spawning call entry, so results can inherit the tool name. */
 	let turnContextCwd: string | undefined;
+	/** Forked rollouts replay ancestor history: only the FIRST session_meta is ours. */
+	let metaSeen = false;
 
 	for await (const { line, value } of await readJsonl(file)) {
 		lastLine = line;
@@ -52,23 +54,27 @@ export async function parseCodexSession(file: string): Promise<NormalizedSession
 			case "session_meta": {
 				const p = rec(e["payload"]);
 				if (!p) break;
-				if (typeof p["id"] === "string") sessionId = p["id"];
-				if (typeof p["cwd"] === "string") {
-					cwd = p["cwd"];
-					turnContextCwd ??= p["cwd"];
-				}
-				if (typeof p["model_provider"] === "string") model ??= p["model_provider"];
-				const originator = typeof p["originator"] === "string" ? p["originator"] : "";
-				const source = rec(p["source"]);
-				const spawn = source ? rec(source["subagent"])?.["thread_spawn"] : undefined;
-				const spawnRec = spawn ? rec(spawn) : undefined;
-				if (spawnRec) {
-					role = "subagent";
-					if (typeof spawnRec["parent_thread_id"] === "string") {
-						parentThreadId = spawnRec["parent_thread_id"];
+				if (!metaSeen) {
+					metaSeen = true;
+					if (typeof p["id"] === "string") sessionId = p["id"];
+					if (typeof p["cwd"] === "string") {
+						cwd = p["cwd"];
+						turnContextCwd ??= p["cwd"];
 					}
-				} else if (originator === "codex_exec" || p["thread_source"] === "exec") {
+				if (typeof p["model_provider"] === "string") model = p["model_provider"];
+				const source = rec(p["source"]);
+					const spawn = source ? rec(source["subagent"])?.["thread_spawn"] : undefined;
+					const spawnRec = spawn ? rec(spawn) : undefined;
+					if (spawnRec) {
+						role = "subagent";
+						if (typeof spawnRec["parent_thread_id"] === "string") {
+							parentThreadId = spawnRec["parent_thread_id"];
+						}
+					}
 					// headless exec runs keep role "main" but are marked via originator in notes
+				} else {
+					// replayed ancestor meta: its cumulative token baseline is inherited, not ours
+					prevTotals = undefined;
 				}
 				break;
 			}
@@ -93,16 +99,43 @@ export async function parseCodexSession(file: string): Promise<NormalizedSession
 					}
 				}
 				if (p["type"] === "token_count") {
-					usage.requests++;
 					const info = rec(p["info"]);
-					const total = info ? rec(info["total_token_usage"]) : undefined;
-					if (total) {
-						totals = {
-							input: typeof total["input_tokens"] === "number" ? total["input_tokens"] : 0,
-							output: typeof total["output_tokens"] === "number" ? total["output_tokens"] : 0,
-							cached: typeof total["cached_input_tokens"] === "number" ? total["cached_input_tokens"] : 0,
-						};
+					if (info === undefined) break;
+					const total = rec(info["total_token_usage"]);
+					if (!total) break;
+					const t = {
+						input: typeof total["input_tokens"] === "number" ? total["input_tokens"] : 0,
+						output: typeof total["output_tokens"] === "number" ? total["output_tokens"] : 0,
+						cached: typeof total["cached_input_tokens"] === "number" ? total["cached_input_tokens"] : 0,
+					};
+					// rate-limit refresh: cumulative unchanged → not a model response
+					if (
+						prevTotals !== undefined &&
+						t.input === prevTotals.input &&
+						t.output === prevTotals.output &&
+						t.cached === prevTotals.cached
+					) {
+						break;
 					}
+					const last = rec(info["last_token_usage"]);
+					if (prevTotals !== undefined || last !== undefined) {
+						// a real model response: prefer the per-turn `last_token_usage`,
+						// fall back to the cumulative delta
+						usage.requests++;
+						if (last !== undefined) {
+							usage.inputTokens += typeof last["input_tokens"] === "number" ? last["input_tokens"] : 0;
+							usage.outputTokens += typeof last["output_tokens"] === "number" ? last["output_tokens"] : 0;
+							usage.cacheReadTokens +=
+								typeof last["cached_input_tokens"] === "number" ? last["cached_input_tokens"] : 0;
+						} else if (prevTotals !== undefined) {
+							usage.inputTokens += Math.max(0, t.input - prevTotals.input);
+							usage.outputTokens += Math.max(0, t.output - prevTotals.output);
+							usage.cacheReadTokens += Math.max(0, t.cached - prevTotals.cached);
+						}
+					}
+					// else: first event without `last` — the cumulative is inherited from a
+					// forked ancestor; record it as baseline only so it is never counted
+					prevTotals = t;
 				}
 				break;
 			}
@@ -112,11 +145,6 @@ export async function parseCodexSession(file: string): Promise<NormalizedSession
 	}
 
 	if (cwd === "") cwd = turnContextCwd ?? "";
-	if (totals !== undefined) {
-		usage.inputTokens = totals.input;
-		usage.outputTokens = totals.output;
-		usage.cacheReadTokens = totals.cached;
-	}
 
 	return {
 		source: "codex",
