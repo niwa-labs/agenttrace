@@ -1,6 +1,6 @@
 # raiseki
 
-Compresses coding-agent session logs (Claude Code, Codex CLI, pi, Cursor) into token-efficient MD traces (×25–180) with lossless `@L<line>` references into the original JSONL — so a session can be fed to an LLM for analysis without shipping megabytes of raw log.
+Takes raw session logs from coding agents (Claude Code, Codex CLI, Cursor, pi) and turns them into short markdown traces that keep the agent's reasoning (thoughts, decisions, mistakes) and drop the bulk (tool output, retries, boilerplate). Every distilled item keeps an `@L<line>` reference to the exact line of the original log. Run it locally against your own LLM endpoint, or hands-off through the built-in work server that external agents drive.
 
 ## Quick start
 
