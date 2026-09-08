@@ -1,0 +1,8 @@
+{"type":"session","version":3,"id":"pi-demo-0001","timestamp":"2026-06-03T09:00:00.000Z","cwd":"/proj/demo"}
+{"type":"model_change","timestamp":"2026-06-03T09:00:01.000Z","model":"minimax/MiniMax-M3"}
+{"type":"message","id":"m1","timestamp":"2026-06-03T09:00:05.000Z","message":{"role":"user","stopReason":null,"content":[{"type":"text","text":"почини импорт в src/main.ts"}]}}
+{"type":"message","id":"m2","timestamp":"2026-06-03T09:00:10.000Z","message":{"role":"assistant","stopReason":"toolUse","content":[{"type":"thinking","thinking":"импорт сломан: путь относительный; гипотеза — tsconfig paths"},{"type":"toolCall","id":"tc1","name":"read","arguments":{"path":"/proj/demo/src/main.ts"}}]}}
+{"type":"message","id":"m3","timestamp":"2026-06-03T09:00:11.000Z","message":{"role":"toolResult","toolCallId":"tc1","toolName":"read","stopReason":null,"content":[{"type":"text","text":"import x from './helper'"}]}}
+{"type":"message","id":"m4","timestamp":"2026-06-03T09:00:20.000Z","message":{"role":"assistant","stopReason":"toolUse","content":[{"type":"text","text":"Правлю импорт на абсолютный."},{"type":"toolCall","id":"tc2","name":"edit","arguments":{"path":"/proj/demo/src/main.ts","old":"./helper","new":"@/helper"}}]}}
+{"type":"message","id":"m5","timestamp":"2026-06-03T09:00:21.000Z","message":{"role":"toolResult","toolCallId":"tc2","toolName":"edit","stopReason":null,"content":[{"type":"text","text":"ok"}]}}
+{"type":"message","id":"m6","timestamp":"2026-06-03T09:00:30.000Z","message":{"role":"assistant","stopReason":"stop","content":[{"type":"text","text":"Импорт починен."}]}}

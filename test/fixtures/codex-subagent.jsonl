@@ -1,0 +1,3 @@
+{"timestamp":"2026-06-02T12:00:20.000Z","type":"session_meta","payload":{"id":"codex-sub-01","timestamp":"2026-06-02T12:00:20.000Z","cwd":"/proj/demo","originator":"codex_exec","cli_version":"0.130.0","source":{"subagent":{"thread_spawn":{"parent_thread_id":"codex-0001","depth":1,"agent_role":"explorer"}}},"thread_source":"subagent"}}
+{"timestamp":"2026-06-02T12:00:21.000Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"ls src\"}","call_id":"s1"}}
+{"timestamp":"2026-06-02T12:00:22.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"s1","output":"Chunk ID: xyz\nWall time: 0.01 seconds\nProcess exited with code 0\nOriginal token count: 10\nOutput\nmain.rs"}}

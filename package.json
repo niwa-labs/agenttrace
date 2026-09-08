@@ -1,0 +1,50 @@
+{
+	"name": "raiseki",
+	"version": "1.0.0",
+	"description": "Compresses coding-agent session logs (Claude Code, Codex CLI, pi) into token-efficient MD traces with lossless @L references for LLM analysis",
+	"type": "module",
+	"license": "MIT",
+	"engines": {
+		"node": ">=22.19.0"
+	},
+	"main": "dist/index.js",
+	"bin": {
+		"raiseki": "dist/index.js"
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"lint": "eslint .",
+		"test": "vitest run",
+		"test:types": "vitest run --typecheck",
+		"test:all": "vitest run --typecheck && npm run lint && npm run typecheck",
+		"sd": "tsx src/index.ts"
+	},
+	"keywords": [
+		"claude-code",
+		"codex",
+		"session-log",
+		"context-compression",
+		"agent-traces",
+		"reasoning-bank",
+		"llm",
+		"coding-agent"
+	],
+	"dependencies": {
+		"@earendil-works/pi-agent-core": "0.84.4",
+		"@earendil-works/pi-ai": "0.84.4",
+		"yaml": "2.9.0"
+	},
+	"devDependencies": {
+		"@types/node": "22.10.2",
+		"@typescript-eslint/parser": "8.69.0",
+		"eslint": "9.39.5",
+		"tsx": "4.23.13",
+		"typescript": "5.9.3",
+		"typescript-eslint": "8.69.0",
+		"vitest": "3.2.7"
+	}
+}
