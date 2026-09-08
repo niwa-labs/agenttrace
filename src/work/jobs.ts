@@ -121,7 +121,10 @@ async function ensureDetForClaim(paths: WorkPaths, record: SessionRecord, segOpt
 			det.segOptions.turnBudgetTokens !== segOptions.turnBudgetTokens ||
 			det.segOptions.windowBudgetTokens !== segOptions.windowBudgetTokens;
 		if (!stale) return;
-		const fresh = buildDet(record, segOptions);
+		const fresh = await buildDet(record, segOptions);
+		// stamp the skeleton with the CURRENT log stat so it isn't immediately stale again
+		fresh.logBytes = st.size;
+		fresh.logMtimeMs = Math.floor(st.mtimeMs);
 		const { dirname } = await import("node:path");
 		await mkdir(dirname(detPath(paths, record.sessionId)), { recursive: true });
 		await writeFile(detPath(paths, record.sessionId), JSON.stringify(fresh), "utf8");
