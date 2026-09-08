@@ -17,6 +17,7 @@ import type { Pass2Output } from "../pipeline/contracts.js";
 import { loadDet } from "./det.js";
 import { readRegistry, projectSlugOf, type SessionRecord } from "./registry.js";
 import { loadState, workPaths } from "./state.js";
+import { toRepoBound } from "./repobound.js";
 import { buildSessionView } from "./view.js";
 import type { DetSession } from "./det.js";
 
@@ -41,6 +42,7 @@ export async function finalize(stateDir: string, models: { fast: string; smart: 
 	const records = await readRegistry(paths);
 	const bank = await loadBank(paths.bankDir);
 	await mkdir(paths.tracesDir, { recursive: true });
+	await mkdir(paths.tracesRepoDir, { recursive: true });
 	await mkdir(paths.resultsDir, { recursive: true });
 
 	const report: FinalizeReport = { traces: [], skippedNoPass2: [], skippedNoDet: [], bankItems: 0, projects: [] };
@@ -99,6 +101,11 @@ export async function finalize(stateDir: string, models: { fast: string; smart: 
 		});
 		const outName = `${(det.startedAt ?? "1970-01-01").slice(0, 10)}-${record.sessionId.slice(0, 8)}.md`;
 		await writeFile(join(outDir, outName), md, "utf8");
+		// repo-bound flavor: no @L refs, relative paths — committable to a public repo
+		const projectDirAbs = det.projectDir ?? record.cursorMeta?.workspacePath;
+		const repoDir = join(paths.tracesRepoDir, project);
+		await mkdir(repoDir, { recursive: true });
+		await writeFile(join(repoDir, outName), toRepoBound(md, projectDirAbs), "utf8");
 
 		await appendFile(
 			paths.metricsFile,

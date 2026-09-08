@@ -100,7 +100,12 @@ export async function runWorkCli(argv: string[]): Promise<number> {
 				const { values } = parseArgs({
 					args: rest,
 					allowPositionals: true,
-					options: { ...shared, layer: { type: "string" }, worker: { type: "string", default: "anonymous" } },
+					options: {
+						...shared,
+						layer: { type: "string" },
+						worker: { type: "string", default: "anonymous" },
+						project: { type: "string" },
+					},
 				});
 				const layer = str(values["layer"]) as Layer | undefined;
 				if (layer !== "pass1" && layer !== "pass2") {
@@ -110,7 +115,8 @@ export async function runWorkCli(argv: string[]): Promise<number> {
 				const stateDir = resolve(str(values["state"]) ?? shared.state.default);
 				const { loadState, workPaths: wp } = await import("./state.js");
 				const leaseMinutes = (await loadState(wp(stateDir))).leaseMinutes;
-				const result = await claimJob(stateDir, layer, str(values["worker"]) ?? "anonymous", leaseMinutes);
+				const project = str(values["project"]);
+				const result = await claimJob(stateDir, layer, str(values["worker"]) ?? "anonymous", leaseMinutes, project !== undefined ? { project } : undefined);
 				emit(result);
 				return result.ok ? 0 : 0; // not-ok claims are protocol answers, not crashes
 			}

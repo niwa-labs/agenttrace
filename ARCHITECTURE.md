@@ -21,6 +21,23 @@ Two entry points share the same deterministic layer:
 - **`distill`** — base trace only (no LLM, instant). Useful as a quick map of a session.
 - **`refine`** — full pipeline. The base layer feeds the LLM stages.
 
+## Core design principle — model judgment, not mechanical rules
+
+The product of this pipeline is a **useful, heavily compressed snapshot** of a session.
+What makes a snapshot useful cannot be decided by mechanical rules: it takes judgment
+about meaning — what a turn was *for*, which operator instructions steer the work,
+which details can be dropped. That judgment is performed by the **models**: pass-1
+distills the intent of each turn (including operator turns — abstracted to neutral
+third-person intent, never verbatim quotes), pass-2 connects the reasoning arcs.
+
+**Deterministic post-processing (regex redaction, masking) is explicitly the wrong
+tool for this.** Mechanical sanitization either leaks (patterns it doesn't know) or
+shreds context (patterns it does). Determinism is reserved for what machines are
+genuinely good at: addressing (`@L<line>`, quote hashes), sealed machine facts, and
+schema validation. Everything that requires understanding *meaning* — abstraction,
+importance, compression — belongs to the model stages. When in doubt, put the
+constraint in the model's contract, not in a post-filter.
+
 ## Deterministic layer (`src/base/`, `src/v2/../core/`)
 
 Everything that requires no semantic judgment is done in code:

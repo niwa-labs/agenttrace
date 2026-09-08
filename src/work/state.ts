@@ -51,6 +51,7 @@ export interface WorkPaths {
 	jobsDir: string;
 	resultsDir: string;
 	tracesDir: string;
+	tracesRepoDir: string;
 	bankDir: string;
 	metricsFile: string;
 }
@@ -66,6 +67,7 @@ export function workPaths(stateDir: string): WorkPaths {
 		jobsDir: join(stateDir, "jobs"),
 		resultsDir: join(stateDir, "results"),
 		tracesDir: join(stateDir, "traces"),
+		tracesRepoDir: join(stateDir, "traces-repo"),
 		bankDir: join(stateDir, "bank"),
 		metricsFile: join(stateDir, "metrics.jsonl"),
 	};

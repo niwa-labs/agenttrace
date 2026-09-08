@@ -109,7 +109,13 @@ export type ClaimResult =
 
 const PENDING_SENTINEL: JobState = { jobId: "", status: "pending", fails: 0, claims: 0 };
 
-export async function claimJob(stateDir: string, layer: Layer, worker: string, leaseMinutes: number): Promise<ClaimResult> {
+export async function claimJob(
+	stateDir: string,
+	layer: Layer,
+	worker: string,
+	leaseMinutes: number,
+	opts?: { project?: string },
+): Promise<ClaimResult> {
 	const paths = workPaths(stateDir);
 	const state = await loadState(paths);
 	return withLock(stateDir, async () => {
@@ -134,6 +140,7 @@ export async function claimJob(stateDir: string, layer: Layer, worker: string, l
 
 		for (const entry of index) {
 			if (entry.layer !== layer) continue;
+			if (opts?.project !== undefined && (entry.project ?? "unknown").includes(opts.project) === false) continue;
 			const st = states.get(entry.jobId);
 			if (st?.status === "done") continue;
 			if (leaseActive(st ?? { ...PENDING_SENTINEL, jobId: entry.jobId }, now.getTime())) continue;

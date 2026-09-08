@@ -68,60 +68,83 @@ async function acceptPass1(paths: WorkPaths, jobId: string, body: unknown, fails
 	}
 
 	const errors: string[] = [];
-	const byTurn = new Map(payload.turns.map((t) => [t.turnIndex, t]));
 	const seen = new Set<number>();
-	const validated: { turn: Pass1Job["turns"][number]; block: Pass1Block }[] = [];
+	const validated: { turns: Pass1Job["turns"]; block: Pass1Block }[] = [];
 
+	// The agent decides which turns to merge: a block whose anchor spans several
+	// consecutive turns covers them all (a run of insignificant steps). Blocks
+	// must exactly partition the window — every turn covered exactly once.
 	for (const raw of blocks) {
 		const turnIndex = (raw as { turnIndex?: unknown }).turnIndex;
 		if (typeof turnIndex !== "number" || !Number.isInteger(turnIndex)) {
-			errors.push("every block needs an integer turnIndex matching the job's turns");
+			errors.push("every block needs an integer turnIndex (the FIRST turn it covers)");
 			continue;
 		}
 		if (seen.has(turnIndex)) {
 			errors.push(`duplicate block for turnIndex ${turnIndex}`);
 			continue;
 		}
-		const turn = byTurn.get(turnIndex);
-		if (turn === undefined) {
-			errors.push(`turnIndex ${turnIndex} is not part of this window (valid: ${[...byTurn.keys()].join(", ")})`);
+		const anchor = (raw as { anchor?: { fromLine?: unknown; toLine?: unknown } }).anchor;
+		const from = anchor?.fromLine;
+		const to = anchor?.toLine;
+		if (typeof from !== "number" || typeof to !== "number") {
+			errors.push(`turnIndex ${turnIndex}: anchor.fromLine/toLine must be integers`);
 			continue;
 		}
-		seen.add(turnIndex);
-		const vErrors = validatePass1Block(raw, {
-			fromLine: turn.fromLine,
-			toLine: turn.toLine,
-			quoteIds: new Set(turn.quoteIds),
-		});
-		// semantic checks beyond the schema
-		const thoughts = (raw as { thoughts?: unknown }).thoughts;
-		if (
-			vErrors.length === 0 &&
-			turn.thoughtQs.length > 0 &&
-			Array.isArray(thoughts) &&
-			thoughts.length === 0
-		) {
-			vErrors.push(
-				`turn ${turnIndex} contains [THINKING] (${turn.thoughtQs.join(", ")}) — thoughts must not be empty: distill the main idea (source="thinking", q=<id>)`,
-			);
+		// turns covered by the anchor span (anchor must align to turn boundaries)
+		const covered = payload.turns.filter((t) => t.fromLine >= from && t.toLine <= to);
+		if (covered.length === 0) {
+			errors.push(`turnIndex ${turnIndex}: anchor ${from}–${to} covers no turn`);
+			continue;
 		}
-		if (vErrors.length === 0) {
-			const anchor = (raw as { anchor?: { fromLine?: unknown; toLine?: unknown } }).anchor;
-			const from = anchor?.fromLine;
-			const to = anchor?.toLine;
-			if (from !== turn.fromLine || to !== turn.toLine) {
-				vErrors.push(`anchor must be exactly {fromLine: ${turn.fromLine}, toLine: ${turn.toLine}} for turnIndex ${turnIndex}`);
+		const first = covered[0];
+		const last = covered[covered.length - 1];
+		if (first === undefined || last === undefined || first.fromLine !== from || last.toLine !== to) {
+			const expectedFrom = first?.fromLine ?? from;
+			const expectedTo = last?.toLine ?? to;
+			errors.push(
+				`turnIndex ${turnIndex}: anchor must align to turn boundaries — expected {fromLine: ${expectedFrom}, toLine: ${expectedTo}} for the covered run`,
+			);
+			continue;
+		}
+		const overlap = covered.some((t) => seen.has(t.turnIndex));
+		if (overlap) {
+			errors.push(`turnIndex ${turnIndex}: covered turns overlap another block`);
+			continue;
+		}
+		for (const t of covered) seen.add(t.turnIndex);
+
+		const quoteIds = new Set(covered.flatMap((t) => t.quoteIds));
+		const vErrors = validatePass1Block(raw, { fromLine: from, toLine: to, quoteIds });
+		// semantic checks
+		const thoughts = (raw as { thoughts?: unknown }).thoughts;
+		const merged = covered.length > 1;
+		if (merged) {
+			// merged runs are insignificant by definition — no thinking allowed inside
+			const withThinking = covered.filter((t) => t.thoughtQs.length > 0);
+			if (withThinking.length > 0) {
+				vErrors.push(
+					`merged block covers turns with [THINKING] (${withThinking.map((t) => `b${t.turnIndex}`).join(", ")}) — do not merge thinking turns, distill them individually`,
+				);
 			}
+			if (Array.isArray(thoughts) && thoughts.length > 0) {
+				vErrors.push("merged (multi-turn) blocks must have empty thoughts — distill significant turns individually");
+			}
+		} else if (first.thoughtQs.length > 0 && Array.isArray(thoughts) && thoughts.length === 0) {
+			vErrors.push(
+				`turn ${turnIndex} contains [THINKING] (${first.thoughtQs.join(", ")}) — thoughts must not be empty: distill the main idea (source="thinking", q=<id>)`,
+			);
 		}
 		if (vErrors.length > 0) {
 			errors.push(`turnIndex ${turnIndex}: ${vErrors.join("; ")}`);
 			continue;
 		}
-		validated.push({ turn, block: asPass1Block(raw) });
+		for (const t of covered) seen.add(t.turnIndex);
+		validated.push({ turns: covered, block: asPass1Block(raw) });
 	}
 
-	for (const turnIndex of byTurn.keys()) {
-		if (!seen.has(turnIndex)) errors.push(`missing block for turnIndex ${turnIndex}`);
+	for (const t of payload.turns) {
+		if (!seen.has(t.turnIndex)) errors.push(`missing block for turnIndex ${t.turnIndex} (lines ${t.fromLine}–${t.toLine})`);
 	}
 
 	let digest: Pass1Digest | undefined;
@@ -145,25 +168,32 @@ async function acceptPass1(paths: WorkPaths, jobId: string, body: unknown, fails
 
 	if (errors.length > 0) return reject(paths, jobId, fails, errors);
 
-	// persist: sidecar first, ledger second
+	// persist: sidecar first, ledger second. A merged block writes one record
+	// per covered turn (same result object, per-turn slice key) so the view
+	// layer can rebuild the span.
 	const ts = new Date().toISOString();
-	const records: SidecarRecord[] = validated.map(({ turn, block }) => ({
-		type: "block",
-		schemaVersion: SIDECAR_SCHEMA_VERSION,
-		promptHash: payload.promptHash,
-		sessionId: payload.sessionId,
-		logFile: payload.logFile,
-		fromLine: turn.fromLine,
-		toLine: turn.toLine,
-		sliceHash: turn.sliceHash,
-		windowIndex: payload.windowIndex,
-		toolNames: turn.toolNames,
-		tokens: turn.tokens,
-		result: block,
-		retries: fails,
-		fallback: block.fallback === true,
-		ts,
-	}));
+	const records: SidecarRecord[] = [];
+	for (const { turns: covered, block } of validated) {
+		for (const turn of covered) {
+			records.push({
+				type: "block",
+				schemaVersion: SIDECAR_SCHEMA_VERSION,
+				promptHash: payload.promptHash,
+				sessionId: payload.sessionId,
+				logFile: payload.logFile,
+				fromLine: turn.fromLine,
+				toLine: turn.toLine,
+				sliceHash: turn.sliceHash,
+				windowIndex: payload.windowIndex,
+				toolNames: turn.toolNames,
+				tokens: turn.tokens,
+				result: block,
+				retries: fails,
+				fallback: block.fallback === true,
+				ts,
+			});
+		}
+	}
 	if (digest !== undefined) {
 		records.push({
 			type: "digest",
