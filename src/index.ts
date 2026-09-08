@@ -51,6 +51,7 @@ function parse(): Parsed {
 					...COMMON_OPTIONS,
 					"no-chain": { type: "boolean", default: false },
 					"chain-gap": { type: "string", default: "45" },
+					"repo-bound": { type: "boolean", default: false },
 				}
 			: {
 					...COMMON_OPTIONS,
@@ -74,6 +75,7 @@ function printUsage(): void {
     --source <list>      claude,codex,pi (по умолчанию claude,codex)
     --no-chain           не сливать связанные сессии
     --chain-gap <min>    зазор для слияния, минут (45)
+    --repo-bound         вариант для коммита в репозиторий: без @L-якорей и абсолютных путей
 
   sd refine [rootDir] [options]      полный: FAST-проход + SMART + банк
     --fast-model <p/id>  простая модель ($SD_FAST_MODEL; по умолчанию = --model)
@@ -129,6 +131,7 @@ async function main(): Promise<void> {
 			sources,
 			chain: { enabled: values["no-chain"] !== true, tightGapMinutes: 5, looseGapMinutes: chainGap },
 			...(only !== undefined ? { only } : {}),
+			...(values["repo-bound"] === true ? { repoBound: true } : {}),
 		});
 		console.log(`просмотрено логов: ${report.logsScanned}, распарсено: ${report.logsParsed}`);
 		console.log(`трейсов: ${report.traces.length} → ${outDir}`);

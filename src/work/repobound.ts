@@ -7,9 +7,12 @@
  * - absolute paths under the project dir → repo-relative
  * What stays: titles, distilled thoughts, arcs, edited file names (relative),
  * verdict, metrics — the data chain of the session remains followable.
+ * - any other absolute path under the operator's home → `~/…` (no machine layout leaks)
  */
 
-export function toRepoBound(traceMd: string, projectDir?: string): string {
+import { homedir } from "node:os";
+
+export function toRepoBound(traceMd: string, projectDir?: string, home: string = homedir()): string {
 	let s = traceMd;
 	// truncation tombstones: keep the fact, drop the private pointer
 	s = s.replace(/…⟨урезано, полный текст @L\d+⟩/g, "…⟨truncated⟩");
@@ -28,6 +31,12 @@ export function toRepoBound(traceMd: string, projectDir?: string): string {
 		s = s.split(clean + "/").join("");
 		s = s.split(clean).join(".");
 	}
+	// any other absolute path under the operator's home (other repos, reports, dotfiles) → `~`
+	const cleanHome = home.replace(/\/+$/, "");
+	if (cleanHome.length > 1) s = s.split(cleanHome).join("~");
+	// truncated renderings cut the home path mid-name (`/Users/alex…`), and other operators'
+	// homes may appear in pasted output: mask any `/Users/<x>` or `/home/<x>` prefix as `~`
+	s = s.replace(/\/(?:Users|home)\/[^/\s`'"()⟨⟩]*/g, "~");
 	// collapse whitespace runs left by removals
 	s = s.replace(/\n{3,}/g, "\n\n");
 	return s;

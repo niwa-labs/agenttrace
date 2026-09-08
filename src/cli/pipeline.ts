@@ -14,6 +14,7 @@ import { distill, DEFAULT_DISTILL_OPTIONS } from "../base/trace-builder.js";
 import type { ChainOptions } from "../base/chain.js";
 import { renderTraceMd } from "../base/render-md.js";
 import { traceFileName } from "../base/naming.js";
+import { toRepoBound } from "../work/repobound.js";
 import type { NormalizedSession, SourceKind } from "../model/session.js";
 
 export interface DistillRunOptions {
@@ -23,6 +24,8 @@ export interface DistillRunOptions {
 	chain: ChainOptions;
 	/** substring filter on log path, applied before parsing (mirrors refine) */
 	only?: string;
+	/** Render the repo-bound flavor (no `@L` anchors, no absolute private paths) — committable to a repository. */
+	repoBound?: boolean;
 	/** overrides for tests / non-default install locations */
 	claudeProjectsDir?: string;
 	piSessionsDir?: string;
@@ -87,7 +90,8 @@ export async function runDistill(opts: DistillRunOptions): Promise<DistillReport
 	const report: TraceReportEntry[] = [];
 	const usedNames = new Set<string>();
 	for (const trace of traces) {
-		const md = renderTraceMd(trace);
+		const rendered = renderTraceMd(trace);
+		const md = opts.repoBound === true ? toRepoBound(rendered, opts.rootDir) : rendered;
 		const base = traceFileName(trace.sessions, trace.sessions[0]?.title);
 		// distinct traces can produce the same name (same day, same slug) — keep both
 		let name = base;

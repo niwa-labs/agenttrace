@@ -16,8 +16,8 @@ import { parseCodexSession } from "../src/sources/codex/parse.js";
 const T0 = "2026-06-01T10:00:00.000Z";
 const T1 = "2026-06-01T10:00:10.000Z";
 const T2 = "2026-06-01T10:00:20.000Z";
-const T3 = "2026-06-01T10:00:30.000Z";
-const T4 = "2026-06-01T10:00:40.000Z";
+const _T3 = "2026-06-01T10:00:30.000Z";
+const _T4 = "2026-06-01T10:00:40.000Z";
 
 function meta(id: string, cwd: string): string {
 	return JSON.stringify({ type: "session_meta", timestamp: T0, payload: { id, cwd, model_provider: "test" } });

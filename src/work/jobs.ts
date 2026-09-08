@@ -17,18 +17,19 @@
  * read only when building a claimed job's payload.
  */
 
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { anchorTurn } from "../pipeline/anchors.js";
 import { renderTurn, renderOptionsForTurn } from "../pipeline/render-turn.js";
-import { segmentTurns } from "../pipeline/turns.js";
+import { segmentTurns, type SegmentOptions } from "../pipeline/turns.js";
 import { readSidecarDigests } from "../pipeline/sidecar.js";
 import type { SourceKind } from "../model/session.js";
+import { statSync } from "node:fs";
 import type { CursorLogMeta } from "../sources/cursor/types.js";
 import type { SessionRecord } from "./registry.js";
 import { appendLedger, deriveJobStates, leaseActive, readLedger, type JobState } from "./ledger.js";
 import { readJobsIndex, type JobIndexEntry } from "./jobs-index.js";
-import { loadDet, type DetSession, type DetWindow } from "./det.js";
+import { buildDet, detPath, loadDet, type DetSession, type DetWindow } from "./det.js";
 import { readRegistry } from "./registry.js";
 import { loadState, workPaths, type WorkPaths, type WorkState } from "./state.js";
 import { withLock } from "./lock.js";
@@ -106,6 +107,28 @@ export type ClaimResult =
 	| { ok: false; code: "layer-locked"; pendingInPreviousLayer: number; message: string }
 	| { ok: false; code: "empty"; message: string }
 	| { ok: false; code: "all-claimed"; message: string };
+
+
+/** Rebuild a det skeleton when the log changed after it was built (mtime/bytes moved). */
+async function ensureDetForClaim(paths: WorkPaths, record: SessionRecord, segOptions: SegmentOptions): Promise<void> {
+	try {
+		const st = statSync(record.logFile);
+		const det = await loadDet(paths, record.sessionId);
+		const stale =
+			det === undefined ||
+			det.logBytes !== st.size ||
+			Math.abs(det.logMtimeMs - st.mtimeMs) > 2000 ||
+			det.segOptions.turnBudgetTokens !== segOptions.turnBudgetTokens ||
+			det.segOptions.windowBudgetTokens !== segOptions.windowBudgetTokens;
+		if (!stale) return;
+		const fresh = buildDet(record, segOptions);
+		const { dirname } = await import("node:path");
+		await mkdir(dirname(detPath(paths, record.sessionId)), { recursive: true });
+		await writeFile(detPath(paths, record.sessionId), JSON.stringify(fresh), "utf8");
+	} catch {
+		// stat/import failures fall through to the plain claim attempt
+	}
+}
 
 const PENDING_SENTINEL: JobState = { jobId: "", status: "pending", fails: 0, claims: 0 };
 
@@ -281,6 +304,8 @@ async function buildPayload(paths: WorkPaths, state: WorkState, entry: JobIndexE
 	const records = await readRegistry(paths);
 	const record = records.find((r) => r.sessionId === entry.sessionId);
 	if (record === undefined) throw new Error(`session ${entry.sessionId} not in registry`);
+	// the log may have changed since the skeleton was built — rebuild on mismatch
+	await ensureDetForClaim(paths, record, state.segOptions);
 	const det = await loadDet(paths, entry.sessionId);
 	if (det === undefined) throw new Error(`no det skeleton for ${entry.sessionId} — rerun work init`);
 	const envelope = {

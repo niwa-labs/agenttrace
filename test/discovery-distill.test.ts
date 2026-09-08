@@ -4,7 +4,7 @@
  * `--only` and the pi source.
  */
 
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -99,5 +99,19 @@ describe("distill --only and pi source", () => {
 		expect(all.logsScanned).toBe(3);
 		expect(all.logsParsed).toBe(3);
 		expect(all.traces.length).toBeGreaterThanOrEqual(2);
+
+		// --repo-bound strips private coordinates: no @L anchors, no absolute project path
+		const bound = await runDistill({ ...common, outDir: join(base, "out-bound"), only: "alpha", repoBound: true });
+		const boundFile = bound.traces[0]?.file;
+		const rawFile = onlyAlpha.traces[0]?.file;
+		expect(boundFile).toBeDefined();
+		expect(rawFile).toBeDefined();
+		if (boundFile === undefined || rawFile === undefined) return;
+		const boundMd = await readFile(boundFile, "utf8");
+		expect(boundMd).not.toMatch(/@L\d+/);
+		expect(boundMd).not.toContain(ROOT);
+		expect(boundMd).not.toMatch(/^\s*logFile:/m);
+		const rawMd = await readFile(rawFile, "utf8");
+		expect(rawMd).toMatch(/@L\d+/);
 	}, 30_000);
 });
