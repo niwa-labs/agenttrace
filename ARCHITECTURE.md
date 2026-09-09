@@ -21,6 +21,12 @@ Two entry points share the same deterministic layer:
 - **`distill`** — base trace only (no LLM, instant). Useful as a quick map of a session.
 - **`refine`** — full pipeline. The base layer feeds the LLM stages.
 
+A third rendering, the **repo-bound flavor** (`distill --repo-bound`, also written by
+`work finalize` into `traces-repo/<project>/`), is the same trace stripped of everything
+that only makes sense next to the original logs: `@L` anchors, private log pointers,
+absolute paths (home directories masked as `~`, project paths made repo-relative). It is
+the flavor meant to be committed into a shared repository.
+
 ## Core design principle — model judgment, not mechanical rules
 
 The product of this pipeline is a **useful, heavily compressed snapshot** of a session.

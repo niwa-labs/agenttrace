@@ -16,6 +16,10 @@ npm run sd -- refine ~/projects/myapp \
   --model my-gateway/zai/glm-5.3-flash \
   --base-url http://127.0.0.1:10081/v1 \
   --out traces/myapp
+
+# repo-bound flavor: no @L anchors, no private log paths, home paths masked as ~,
+# project paths relative to the repo root — safe to commit alongside the code
+npm run sd -- distill ~/projects/myapp --out traces/myapp --repo-bound
 ```
 
 Both commands discover sessions whose `cwd` in the log matches the given directory or any subdirectory.
@@ -56,7 +60,7 @@ npm run sd -- work submit   --state ~/sd-run p1-<sid>-w3 < answer.json
 npm run sd -- work release  --state ~/sd-run p1-<sid>-w3
 npm run sd -- work status   --state ~/sd-run
 npm run sd -- work reindex  --state ~/sd-run --window-tokens 20000
-npm run sd -- work finalize --state ~/sd-run   # traces/<project>/*.md + bank + metrics
+npm run sd -- work finalize --state ~/sd-run   # traces/<project>/*.md (private, with @L) + traces-repo/<project>/*.md (same repo-bound flavor as distill --repo-bound) + bank + metrics
 ```
 
 ## Supported sources
