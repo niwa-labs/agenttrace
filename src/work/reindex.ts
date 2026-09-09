@@ -13,7 +13,7 @@ import { appendFile } from "node:fs/promises";
 import { blockKey, readSidecar } from "../pipeline/sidecar.js";
 import { ensureDet, loadDet } from "./det.js";
 import { writeJobsIndex } from "./jobs-index.js";
-import { inventorySessions } from "./registry.js";
+import { inventorySessions, writeRegistry } from "./registry.js";
 import { loadState, saveState, workPaths } from "./state.js";
 import { withLock } from "./lock.js";
 
@@ -35,6 +35,9 @@ export async function runReindex(stateDir: string, opts: { windowTokens?: number
 		await saveState(paths, state);
 
 		const records = await inventorySessions(paths, state);
+		// keep the registry in sync: inventory may discover new sessions that
+		// the index will reference, and claim rejects jobs without a registry entry
+		await writeRegistry(paths, records);
 		const report: ReindexReport = {
 			windowTokens: state.segOptions.windowBudgetTokens,
 			turnTokens: state.segOptions.turnBudgetTokens,

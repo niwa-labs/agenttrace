@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { runInit } from "../src/work/init.js";
+import { runReindex } from "../src/work/reindex.js";
 import { claimJob, listLayerPage, releaseJob, statusSummary } from "../src/work/jobs.js";
 import { submitJob } from "../src/work/submit.js";
 import { finalize } from "../src/work/finalize.js";
@@ -55,6 +56,18 @@ describe("work server", () => {
 		expect(report.detFailed).toHaveLength(0);
 		const detFiles = await readdir(join(stateDir, "det"));
 		expect(detFiles).toHaveLength(2);
+	});
+
+	it("reindex: registry syncs sessions discovered after init", async () => {
+		const stateDir = join(root, "state-reindex");
+		await runInit(stateDir, testState(join(root, "claude-projects")));
+		await copyFile(FIXTURE, join(root, "claude-projects", "proj-demo", "session-c.jsonl"));
+		const report = await runReindex(stateDir, { windowTokens: 300 });
+		expect(report.sessions).toBe(3);
+		const registry = (await readFile(join(stateDir, "sessions.jsonl"), "utf8"))
+			.split("\n")
+			.filter((l) => l.trim().length > 0);
+		expect(registry).toHaveLength(3);
 	});
 
 	it("status: sessions registered, projects derived from cwd", async () => {

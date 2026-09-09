@@ -18,7 +18,7 @@
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { anchorTurn } from "../pipeline/anchors.js";
 import { renderTurn, renderOptionsForTurn } from "../pipeline/render-turn.js";
 import { segmentTurns, type SegmentOptions } from "../pipeline/turns.js";
@@ -125,7 +125,6 @@ async function ensureDetForClaim(paths: WorkPaths, record: SessionRecord, segOpt
 		// stamp the skeleton with the CURRENT log stat so it isn't immediately stale again
 		fresh.logBytes = st.size;
 		fresh.logMtimeMs = Math.floor(st.mtimeMs);
-		const { dirname } = await import("node:path");
 		await mkdir(dirname(detPath(paths, record.sessionId)), { recursive: true });
 		await writeFile(detPath(paths, record.sessionId), JSON.stringify(fresh), "utf8");
 	} catch {
