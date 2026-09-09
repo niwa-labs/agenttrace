@@ -51,14 +51,27 @@ export async function writeJobsIndex(paths: WorkPaths, records: SessionRecord[])
 			tokens: 0,
 		});
 	}
-	entries.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+	entries.sort(compareEntries);
 	await writeFile(paths.jobsIndexFile, entries.map((e) => JSON.stringify(e)).join("\n") + "\n", "utf8");
 	return entries.length;
 }
 
+/**
+ * Canonical claim order: newest sessions first — the queue drains from the
+ * present into the past, so freshly accumulated logs are distilled while
+ * context around them is still fresh. Sessions without a timestamp go last.
+ * Ties (same session) keep project/session order with pass1 windows ascending
+ * and pass2 after them.
+ */
+function compareEntries(a: JobIndexEntry, b: JobIndexEntry): number {
+	const ta = a.startedAt ?? "0000";
+	const tb = b.startedAt ?? "0000";
+	if (ta !== tb) return tb.localeCompare(ta);
+	return sortKey(a).localeCompare(sortKey(b));
+}
+
 function sortKey(e: JobIndexEntry): string {
-	const started = e.startedAt ?? "9999";
-	return `${e.project ?? "unknown"}\t${started}\t${e.sessionId}\t${e.layer}\t${String(e.windowIndex ?? 0).padStart(6, "0")}`;
+	return `${e.project ?? "unknown"}\t${e.sessionId}\t${e.layer}\t${String(e.windowIndex ?? 0).padStart(6, "0")}`;
 }
 
 export async function readJobsIndex(paths: WorkPaths): Promise<JobIndexEntry[]> {
