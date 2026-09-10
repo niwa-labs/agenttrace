@@ -39,7 +39,7 @@ function testState(claudeRoot: string): WorkState {
 }
 
 beforeAll(async () => {
-	root = await mkdtemp(join(tmpdir(), "sd-work-"));
+	root = await mkdtemp(join(tmpdir(), "raiseki-work-"));
 	const claudeRoot = join(root, "claude-projects", "proj-demo");
 	await mkdir(claudeRoot, { recursive: true });
 	await copyFile(FIXTURE, join(claudeRoot, "session-a.jsonl"));

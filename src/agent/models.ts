@@ -77,7 +77,7 @@ export function registerCustomModels(
 				id: providerId,
 				name: providerId,
 				baseUrl,
-				auth: { apiKey: envApiKeyAuth("SD_API_KEY", ["SD_API_KEY"]) },
+				auth: { apiKey: envApiKeyAuth("RAISEKI_API_KEY", ["RAISEKI_API_KEY"]) },
 				models: providerModels,
 				api: openAICompletionsApi(),
 			}),

@@ -8,7 +8,7 @@ describe("toRepoBound", () => {
 			"- `Read` /home/op/projects/app/src/a.ts @L12 → ok",
 			"- `Write` /home/op/reports/daily/2026-09-07.md @L40–L44",
 			"> `@L<n>` — how to dereference",
-			"- `Bash` npm run sd -- distill /home/op… → ok; pasted: /Users/someone.else/x.txt",
+			"- `Bash` raiseki distill /home/op… → ok; pasted: /Users/someone.else/x.txt",
 		].join("\n");
 		const out = toRepoBound(md, "/home/op/projects/app", "/home/op");
 		expect(out).not.toMatch(/@L\d+/);

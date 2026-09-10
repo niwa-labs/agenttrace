@@ -21,7 +21,7 @@
 		"test": "vitest run",
 		"test:types": "vitest run --typecheck",
 		"test:all": "vitest run --typecheck && npm run lint && npm run typecheck",
-		"sd": "tsx src/index.ts"
+		"raiseki": "tsx src/index.ts"
 	},
 	"keywords": [
 		"claude-code",

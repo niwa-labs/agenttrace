@@ -3,8 +3,8 @@
  * raiseki — compress coding-agent session logs (Claude / Codex / pi)
  * into token-efficient, losslessly-referenced MD traces.
  *
- *   sd distill [rootDir]  — deterministic base trace (fast, no LLM)
- *   sd refine  [rootDir]  — full pipeline: streaming FAST pass + SMART pass + bank
+ *   raiseki distill [rootDir]  — deterministic base trace (fast, no LLM)
+ *   raiseki refine  [rootDir]  — full pipeline: streaming FAST pass + SMART pass + bank
  */
 
 import { parseArgs } from "node:util";
@@ -26,10 +26,10 @@ const COMMON_OPTIONS = {
 	source: { type: "string", default: "claude,codex" },
 	only: { type: "string" },
 	max: { type: "string" },
-	model: { type: "string", default: process.env["SD_MODEL"] ?? "anthropic/claude-sonnet-4-5" },
-	"fast-model": { type: "string", default: process.env["SD_FAST_MODEL"] },
-	"base-url": { type: "string", default: process.env["SD_BASE_URL"] },
-	"api-key": { type: "string", default: process.env["SD_API_KEY"] ?? "stub" },
+	model: { type: "string", default: process.env["RAISEKI_MODEL"] ?? "anthropic/claude-sonnet-4-5" },
+	"fast-model": { type: "string", default: process.env["RAISEKI_FAST_MODEL"] },
+	"base-url": { type: "string", default: process.env["RAISEKI_BASE_URL"] },
+	"api-key": { type: "string", default: process.env["RAISEKI_API_KEY"] ?? "stub" },
 } as const;
 
 function parse(): Parsed {
@@ -70,18 +70,18 @@ function printUsage(): void {
 	console.log(`raiseki — сжатые трейсы агентских сессий
 
 Использование:
-  sd distill [rootDir] [options]     детерминированный трейс-скелет (без LLM)
+  raiseki distill [rootDir] [options]     детерминированный трейс-скелет (без LLM)
     --out <dir>          куда писать (по умолчанию ./traces)
     --source <list>      claude,codex,pi (по умолчанию claude,codex)
     --no-chain           не сливать связанные сессии
     --chain-gap <min>    зазор для слияния, минут (45)
     --repo-bound         вариант для коммита в репозиторий: без @L-якорей и абсолютных путей
 
-  sd refine [rootDir] [options]      полный: FAST-проход + SMART + банк
-    --fast-model <p/id>  простая модель ($SD_FAST_MODEL; по умолчанию = --model)
-    --model <p/id>       умная модель ($SD_MODEL; anthropic/claude-sonnet-4-5)
-    --base-url <url>     OpenAI-совместимый эндпоинт ($SD_BASE_URL)
-    --api-key <key>      ключ ($SD_API_KEY, по умолчанию stub)
+  raiseki refine [rootDir] [options]      полный: FAST-проход + SMART + банк
+    --fast-model <p/id>  простая модель ($RAISEKI_FAST_MODEL; по умолчанию = --model)
+    --model <p/id>       умная модель ($RAISEKI_MODEL; anthropic/claude-sonnet-4-5)
+    --base-url <url>     OpenAI-совместимый эндпоинт ($RAISEKI_BASE_URL)
+    --api-key <key>      ключ ($RAISEKI_API_KEY, по умолчанию stub)
     --window-tokens <n>  окно pass-1 в токенах (40000)
     --turn-tokens <n>    бюджет хода (8000)
     --source <list>      claude,codex,pi

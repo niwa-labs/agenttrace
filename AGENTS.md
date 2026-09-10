@@ -7,11 +7,11 @@ Guidance for coding agents working inside this repository.
 `raiseki` compresses coding-agent session logs (Claude Code, Codex CLI, pi, Cursor) into token-efficient Markdown traces with lossless `@L<line>` references back into the original JSONL. It has two halves:
 
 - a **two-pass LLM pipeline** — `distill` (deterministic base trace, no LLM) and `refine` (FAST pass-1 compression + gate + SMART pass-2 reasoning arcs + reasoning bank);
-- an **agent-facing work server** (`sd work`) — the same pipeline driven by *external* agents: the program hands out bounded job batches, agents do the model work and submit results for machine validation.
+- an **agent-facing work server** (`raiseki work`) — the same pipeline driven by *external* agents: the program hands out bounded job batches, agents do the model work and submit results for machine validation.
 
 ## Setup
 
-- Node ≥ 22.19, `npm install`. There is **no build step** — everything runs through tsx: `npm run sd -- <command>`.
+- Node ≥ 22.19, `npm install`. There is **no build step** — everything runs through tsx: `raiseki <command>`.
 - `npm run test:all` = `vitest run --typecheck` + `eslint .` + `tsc --noEmit`. Run it before committing and keep it green (currently: 111 tests, 0 failures).
 - Strict TypeScript: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, ESM with mandatory `.js` suffixes on relative imports, tab indentation.
 
@@ -21,26 +21,26 @@ Guidance for coding agents working inside this repository.
 - `base/` — deterministic trace builder (turn segmentation, `@L` anchors, sealed facts, session chaining, MD rendering). No LLM.
 - `sources/` — session adapters producing one normalized shape: `claude/`, `codex/`, `pi/`, `cursor/` (IDE `state.vscdb` export + cursor-agent CLI chats).
 - `core/` — shared text/token/reference helpers; `agent/` — model client setup; `model/` — normalized session/trace types.
-- `work/` — the work server: state, session registry, jobs index, claim/submit/release, append-only ledger, lock, reindex, finalize. `index.ts` + `cli/pipeline.ts` route `distill`/`refine`; `work/cli.ts` routes `sd work`.
+- `work/` — the work server: state, session registry, jobs index, claim/submit/release, append-only ledger, lock, reindex, finalize. `index.ts` + `cli/pipeline.ts` route `distill`/`refine`; `work/cli.ts` routes `raiseki work`.
 
 ## Two entry modes — pick deliberately
 
-1. **`distill` / `refine`** — the script calls the LLM itself. Model/endpoint via flags or env: `SD_MODEL`, `SD_FAST_MODEL`, `SD_BASE_URL`, `SD_API_KEY`; any OpenAI-compatible gateway through `--base-url`. `--source` accepts `claude,codex,pi`.
+1. **`distill` / `refine`** — the script calls the LLM itself. Model/endpoint via flags or env: `RAISEKI_MODEL`, `RAISEKI_FAST_MODEL`, `RAISEKI_BASE_URL`, `RAISEKI_API_KEY`; any OpenAI-compatible gateway through `--base-url`. `--source` accepts `claude,codex,pi`.
 2. **`work`** — the script **never** calls an LLM. External agents drive the pipeline: claim a batch → do the compression → submit the answer as JSON on stdin. Use this mode when the "compute" is you (an agent), not a scripted model call.
 
-## `sd work` protocol (quick reference)
+## `raiseki work` protocol (quick reference)
 
-Every subcommand prints exactly **one JSON object on stdout**; progress and usage go to stderr. Default state dir: `./.sd-work`.
+Every subcommand prints exactly **one JSON object on stdout**; progress and usage go to stderr. Default state dir: `./.raiseki-work`.
 
 ```bash
-sd work init     --state <dir> [roots/flags]   # build/resume state
-sd work claim    --state <dir> --layer pass1 --worker <name>
-sd work submit   --state <dir> <jobId>          # JSON on stdin
-sd work release  --state <dir> <jobId>
-sd work layer    --state <dir> pass1 [--cursor <tok>] [--limit <n>]
-sd work status   --state <dir>
-sd work reindex  --state <dir> [--window-tokens N] [--turn-tokens N]
-sd work finalize --state <dir>
+raiseki work init     --state <dir> [roots/flags]   # build/resume state
+raiseki work claim    --state <dir> --layer pass1 --worker <name>
+raiseki work submit   --state <dir> <jobId>          # JSON on stdin
+raiseki work release  --state <dir> <jobId>
+raiseki work layer    --state <dir> pass1 [--cursor <tok>] [--limit <n>]
+raiseki work status   --state <dir>
+raiseki work reindex  --state <dir> [--window-tokens N] [--turn-tokens N]
+raiseki work finalize --state <dir>
 ```
 
 - `init` — exports Cursor chats, inventories session logs into `sessions.jsonl` (each session assigned to a project), builds deterministic skeletons (`det/`) and `jobs-index.jsonl`. Roots: `--claude-root`, `--codex-root`, `--pi-root` (repeatable), `--no-cursor`, `--cursor-ide-db`, `--cursor-agent-root`, `--only <substr>`, plus `--window-tokens`/`--turn-tokens`/`--lease-min`. Resumable.

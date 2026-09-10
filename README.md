@@ -8,10 +8,10 @@ Takes raw session logs from coding agents (Claude Code, Codex CLI, Cursor, pi) a
 npm install
 
 # deterministic trace, no LLM (instant)
-npm run sd -- distill ~/projects/myapp --out traces/myapp
+raiseki distill ~/projects/myapp --out traces/myapp
 
 # full pipeline: PASS-1 (FAST) + PASS-2 (SMART) + reasoning bank
-npm run sd -- refine ~/projects/myapp \
+raiseki refine ~/projects/myapp \
   --fast-model my-gateway/minimax/MiniMax-M3 \
   --model my-gateway/zai/glm-5.3-flash \
   --base-url http://127.0.0.1:10081/v1 \
@@ -19,7 +19,7 @@ npm run sd -- refine ~/projects/myapp \
 
 # repo-bound flavor: no @L anchors, no private log paths, home paths masked as ~,
 # project paths relative to the repo root — safe to commit alongside the code
-npm run sd -- distill ~/projects/myapp --out traces/myapp --repo-bound
+raiseki distill ~/projects/myapp --out traces/myapp --repo-bound
 ```
 
 Both commands discover sessions whose `cwd` in the log matches the given directory or any subdirectory.
@@ -54,13 +54,13 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full pipeline description.
 **Agent-facing work server** (`work`) — the same pipeline driven by *external* agents instead of built-in model calls. `work init` exports Cursor chats, inventories all session logs (each assigned to a project), and builds deterministic skeletons; `work claim` hands one agent exactly one bounded batch (a ~40k-token window for pass-1, one session's grouped form for pass-2) as JSON on stdout; the agent answers and `work submit` validates the JSON against the same contracts — accept persists to sidecars/results, reject returns machine-fixable errors for repair-in-place. Layers are strict (a session's pass-2 unlocks only when every pass-1 window of *that session* is done; window *n* only after *n−1*, carrying the compression digest), claims hold leases (expired ones are reclaimable), and an append-only ledger makes every step crash-safe and resumable. `work layer` (cursor-paginated) lists a layer's jobs; `work reindex` re-splits windows (e.g. 40k → 20k tokens) without losing done work — already-compressed turns are reconciled from sidecars.
 
 ```bash
-npm run sd -- work init     --state ~/sd-run --claude-root ~/.claude/projects --pi-root ~/.pi/agent/sessions
-npm run sd -- work claim    --state ~/sd-run --layer pass1 --worker agent-1
-npm run sd -- work submit   --state ~/sd-run p1-<sid>-w3 < answer.json
-npm run sd -- work release  --state ~/sd-run p1-<sid>-w3
-npm run sd -- work status   --state ~/sd-run
-npm run sd -- work reindex  --state ~/sd-run --window-tokens 20000
-npm run sd -- work finalize --state ~/sd-run   # traces/<project>/*.md (private, with @L) + traces-repo/traces/<project>/*.md (same repo-bound flavor as distill --repo-bound) + bank + metrics
+raiseki work init     --state ~/raiseki-run --claude-root ~/.claude/projects --pi-root ~/.pi/agent/sessions
+raiseki work claim    --state ~/raiseki-run --layer pass1 --worker agent-1
+raiseki work submit   --state ~/raiseki-run p1-<sid>-w3 < answer.json
+raiseki work release  --state ~/raiseki-run p1-<sid>-w3
+raiseki work status   --state ~/raiseki-run
+raiseki work reindex  --state ~/raiseki-run --window-tokens 20000
+raiseki work finalize --state ~/raiseki-run   # traces/<project>/*.md (private, with @L) + traces-repo/traces/<project>/*.md (same repo-bound flavor as distill --repo-bound) + bank + metrics
 ```
 
 ## Supported sources
@@ -77,7 +77,7 @@ Cursor sources are ingested via the work server (`work init` exports chats to li
 
 ## Models
 
-Any OpenAI-compatible endpoint via `--base-url`. Defaults to `anthropic/claude-sonnet-4-5` (or `$SD_MODEL`). Use `--fast-model` for a cheaper first pass — e.g. `--fast-model my-gateway/minimax/MiniMax-M3 --model my-gateway/zai/glm-5.3-flash --base-url http://localhost:10081/v1`.
+Any OpenAI-compatible endpoint via `--base-url`. Defaults to `anthropic/claude-sonnet-4-5` (or `$RAISEKI_MODEL`). Use `--fast-model` for a cheaper first pass — e.g. `--fast-model my-gateway/minimax/MiniMax-M3 --model my-gateway/zai/glm-5.3-flash --base-url http://localhost:10081/v1`.
 
 ## Reasoning bank
 
@@ -85,14 +85,14 @@ PASS-2 extracts ≤3 knowledge items per trace (`strategy` or `guardrail`) into 
 
 ## Documentation
 
-- [AGENTS.md](AGENTS.md) — for coding agents: setup, source layout, the `sd work` protocol, invariants, and gotchas.
+- [AGENTS.md](AGENTS.md) — for coding agents: setup, source layout, the `raiseki work` protocol, invariants, and gotchas.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — how the pipeline works internally.
 
 ## Development
 
 ```bash
-npm run test:all    # typecheck + lint + tests
-npm run sd          # CLI without build (tsx)
+npm run test:all     # typecheck + lint + tests
+npm run raiseki   # CLI without build (tsx)
 ```
 
 Node ≥ 22.19, ESM. Dependencies: `@earendil-works/pi-agent-core`, `@earendil-works/pi-ai`, `yaml`.

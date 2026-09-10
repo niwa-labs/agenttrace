@@ -1,17 +1,17 @@
 /**
- * Agent-facing CLI for the work server (`sd work ...`).
+ * Agent-facing CLI for the work server (`raiseki work ...`).
  *
  * Every command prints exactly one JSON object to stdout (machine protocol);
  * human-readable progress goes to stderr. Agents drive the pipeline layer by
  * layer: `claim` → do the work → `submit` (JSON on stdin) → exit.
  *
- *   sd work init     --state <dir> [roots/cursor flags]   build state (resumable)
- *   sd work status   --state <dir>                        counters per layer/project
- *   sd work claim    --state <dir> --layer <L> --worker <name>
- *   sd work submit   --state <dir> <jobId>                JSON body on stdin
- *   sd work release  --state <dir> <jobId>
- *   sd work layer    --state <dir> <L> [--cursor] [--limit]
- *   sd work finalize --state <dir>                        traces + bank + metrics
+ *   raiseki work init     --state <dir> [roots/cursor flags]   build state (resumable)
+ *   raiseki work status   --state <dir>                        counters per layer/project
+ *   raiseki work claim    --state <dir> --layer <L> --worker <name>
+ *   raiseki work submit   --state <dir> <jobId>                JSON body on stdin
+ *   raiseki work release  --state <dir> <jobId>
+ *   raiseki work layer    --state <dir> <L> [--cursor] [--limit]
+ *   raiseki work finalize --state <dir>                        traces + bank + metrics
  */
 
 import { parseArgs } from "node:util";
@@ -32,7 +32,7 @@ export async function runWorkCli(argv: string[]): Promise<number> {
 	}
 	const rest = argv.slice(1);
 	const shared = {
-		state: { type: "string", default: join(process.cwd(), ".sd-work") },
+		state: { type: "string", default: join(process.cwd(), ".raiseki-work") },
 	} as const;
 
 	try {
@@ -128,7 +128,7 @@ export async function runWorkCli(argv: string[]): Promise<number> {
 				});
 				const jobId = positionals[0];
 				if (jobId === undefined) {
-					emit({ ok: false, error: "usage: sd work submit <jobId>  (JSON on stdin)" });
+					emit({ ok: false, error: "usage: raiseki work submit <jobId>  (JSON on stdin)" });
 					return 1;
 				}
 				const stdin = await readStdin();
@@ -140,7 +140,7 @@ export async function runWorkCli(argv: string[]): Promise<number> {
 				const { values, positionals } = parseArgs({ args: rest, allowPositionals: true, options: shared });
 				const jobId = positionals[0];
 				if (jobId === undefined) {
-					emit({ ok: false, error: "usage: sd work release <jobId>" });
+					emit({ ok: false, error: "usage: raiseki work release <jobId>" });
 					return 1;
 				}
 				emit(await releaseJob(resolve(str(values["state"]) ?? shared.state.default), jobId));
@@ -154,7 +154,7 @@ export async function runWorkCli(argv: string[]): Promise<number> {
 				});
 				const layer = positionals[0] as Layer | undefined;
 				if (layer !== "pass1" && layer !== "pass2") {
-					emit({ ok: false, error: "usage: sd work layer <pass1|pass2> [--cursor <tok>] [--limit <n>]" });
+					emit({ ok: false, error: "usage: raiseki work layer <pass1|pass2> [--cursor <tok>] [--limit <n>]" });
 					return 1;
 				}
 				const page = await listLayerPage(resolve(str(values["state"]) ?? shared.state.default), layer, str(values["cursor"]), num(values["limit"]) ?? 20);
@@ -228,24 +228,24 @@ async function readStdin(): Promise<string> {
 }
 
 function printWorkUsage(): void {
-	console.error(`sd work — агентский режим: скрипт раздаёт данные слоями, агент сжимает и сдаёт результат
+	console.error(`raiseki work — агентский режим: скрипт раздаёт данные слоями, агент сжимает и сдаёт результат
 
-  sd work init --state <dir>     собрать состояние: cursor-экспорт, реестр сессий, det-скелеты
+  raiseki work init --state <dir>     собрать состояние: cursor-экспорт, реестр сессий, det-скелеты
       --claude-root <dir> ...    корни логов claude (по умолчанию ~/.claude-my/projects, ~/.claude/projects)
       --codex-root <dir> ...     корни логов codex (по умолчанию выключены)
       --pi-root <dir> ...        корни логов pi (~/.pi/agent/sessions)
       --no-cursor                не импортировать Cursor (IDE + agent CLI)
       --only <substr>            оставить в реестре только логи с подстрокой
-  sd work status --state <dir>                    счётчики по слоям/проектам
-  sd work claim --state <dir> --layer pass1 --worker <name>
+  raiseki work status --state <dir>                    счётчики по слоям/проектам
+  raiseki work claim --state <dir> --layer pass1 --worker <name>
       взять одну пачку (окно ~40k tok); pass2 откроется, когда весь pass1 готов
-  sd work submit --state <dir> <jobId> < result.json
+  raiseki work submit --state <dir> <jobId> < result.json
       сдать результат (JSON на stdin); ошибки валидации → ok:false, чини и сдавай снова
-  sd work release --state <dir> <jobId>           отказаться от пачки
-  sd work layer --state <dir> pass1 [--cursor <tok>] [--limit <n>]
+  raiseki work release --state <dir> <jobId>           отказаться от пачки
+  raiseki work layer --state <dir> pass1 [--cursor <tok>] [--limit <n>]
       постраничный обзор пачек слоя
-  sd work finalize --state <dir>                  трейсы по проектам + банк + метрики
-  sd work reindex --state <dir> [--window-tokens N] [--turn-tokens N]
+  raiseki work finalize --state <dir>                  трейсы по проектам + банк + метрики
+  raiseki work reindex --state <dir> [--window-tokens N] [--turn-tokens N]
       перестроить окна (меньшие пачки); уже сжатые ходы зачитываются по сайдкару
 
 Все ответы — один JSON-объект на stdout.
