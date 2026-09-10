@@ -60,7 +60,7 @@ npm run sd -- work submit   --state ~/sd-run p1-<sid>-w3 < answer.json
 npm run sd -- work release  --state ~/sd-run p1-<sid>-w3
 npm run sd -- work status   --state ~/sd-run
 npm run sd -- work reindex  --state ~/sd-run --window-tokens 20000
-npm run sd -- work finalize --state ~/sd-run   # traces/<project>/*.md (private, with @L) + traces-repo/<project>/*.md (same repo-bound flavor as distill --repo-bound) + bank + metrics
+npm run sd -- work finalize --state ~/sd-run   # traces/<project>/*.md (private, with @L) + traces-repo/traces/<project>/*.md (same repo-bound flavor as distill --repo-bound) + bank + metrics
 ```
 
 ## Supported sources
