@@ -30,15 +30,15 @@ An MD file with typed YAML frontmatter and a compressed timeline where every tho
 
 ```md
 #### b3 · @L11–L14 · read,bash
-💭 PIVOT: Code already emits '1'/'0', not Python True — the reported bug is stale. @L14
-`read` …/settings.py @L11 → response = super().get(…) ⟨1.4kB, 29 ln, @L12⟩
+💭 PIVOT: Config loader already normalizes 'yes'/'no' to booleans — the parser bug report is stale. @L14
+`read` …/settings.py @L11 → value = cast_bool(raw) ⟨1.4kB, 29 ln, @L12⟩
 `bash` find …/legacy-app/… @L11 → ERR (no output) @L13
-`bash` ls …/legacy-app … @L14 → нет результата
-→ Verified settings.py:564 already uses '1'/'0'… searching for cast_bool…
+`bash` ls …/legacy-app … @L14 → no such directory
+→ Verified settings.py:87 already handles 'yes'/'no'… searching for cast_bool callers…
 
-## Дуги рассуждения
-- **PIVOT** [confirmed] settings.py already emits '1'/'0' — the reported bug is stale @L12→L14
-- **ERR-R** [noticed] Assumed legacy-app at apps/legacy-app — find returned exit 1 @L11→L14
+## Reasoning arcs
+- **PIVOT** [confirmed] settings.py already normalizes 'yes'/'no' — the reported bug is stale @L12→L14
+- **ERR-R** [noticed] Assumed the app lives at apps/legacy-app — find returned exit 1 @L11→L14
 ```
 
 Every compressed element dereferences via `sed -n '<n>p' <logFile>`.

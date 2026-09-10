@@ -61,7 +61,7 @@ One agent session per window (~40k tokens of turns). The model sees thinking int
 ```json
 {
   "anchor": {"fromLine": 11, "toLine": 14},
-  "action": "Verified settings.py:564 already uses '1'/'0'…",
+  "action": "Verified settings.py:87 already normalizes 'yes'/'no'…",
   "thoughts": [
     {"kind": "PIVOT", "source": "thinking", "text": "the reported bug is stale", "q": "q01016a"}
   ],
