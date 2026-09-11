@@ -18,7 +18,7 @@ export interface WorkState {
 	schemaVersion: number;
 	createdAt: string;
 	/** log roots to inventory (each is a `<kind>-projects`-style dir) */
-	roots: { claude: string[]; codex: string[]; pi: string[] };
+	roots: { claude: string[]; codex: string[]; pi: string[]; qwen?: string[]; kimi?: string[]; minimax?: string[] };
 	cursorIde: { db: string; out: string } | null;
 	cursorAgent: { chatsRoot: string; workspaceStorageDir: string; out: string } | null;
 	segOptions: { turnBudgetTokens: number; windowBudgetTokens: number };

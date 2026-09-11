@@ -1,0 +1,25 @@
+{"type": "metadata", "protocol_version": "1.4", "created_at": 1784794429579}
+{"type": "config.update", "profileName": "agent", "systemPrompt": "You are Kimi Code CLI, a test fixture."}
+{"type": "config.update", "modelAlias": "kimi-code/k3", "thinkingEffort": "high", "time": 1784794429580}
+{"type": "tools.set_active_tools", "names": ["Read", "Write", "Bash"], "time": 1784794429585}
+{"type": "turn.prompt", "input": [{"type": "text", "text": "list the docs"}], "origin": {"kind": "user"}, "time": 1784794429611}
+{"type": "context.append_message", "message": {"role": "user", "content": [{"type": "text", "text": "list the docs"}], "toolCalls": [], "origin": {"kind": "user"}}, "time": 1784794429612}
+{"type": "context.append_message", "message": {"role": "user", "content": [{"type": "text", "text": "<system-reminder>\nAuto permission mode is active. Tool approvals will be handled automatically.\n</system-reminder>"}], "toolCalls": [], "origin": {"kind": "system"}}, "time": 1784794429613}
+{"type": "context.append_loop_event", "event": {"type": "step.begin", "uuid": "s1", "turnId": "0", "step": 1}, "time": 1784794430114}
+{"type": "llm.request", "kind": "loop", "provider": "kimi", "model": "k3", "modelAlias": "kimi-code/k3", "thinkingEffort": "high", "time": 1784794430120}
+{"type": "context.append_loop_event", "event": {"type": "content.part", "uuid": "p1", "turnId": "0", "step": 1, "part": {"type": "think", "think": "User wants the docs listed. I will read the README first."}}, "time": 1784794431000}
+{"type": "context.append_loop_event", "event": {"type": "tool.call", "uuid": "call_1", "turnId": "0", "step": 1, "stepUuid": "s1", "toolCallId": "call_1", "name": "Read", "args": {"path": "/work/demo/README.md"}, "description": "Reading README.md"}, "time": 1784794432000}
+{"type": "context.append_loop_event", "event": {"type": "tool.result", "parentUuid": "call_1", "toolCallId": "call_1", "result": {"output": "# Demo\ndocs live in docs/"}}, "time": 1784794433000}
+{"type": "context.append_loop_event", "event": {"type": "step.begin", "uuid": "s2", "turnId": "0", "step": 2}, "time": 1784794433500}
+{"type": "context.append_loop_event", "event": {"type": "tool.call", "uuid": "call_2", "turnId": "0", "step": 2, "stepUuid": "s2", "toolCallId": "call_2", "name": "Bash", "args": {"command": "ls docs"}, "description": "List docs"}, "time": 1784794434000}
+{"type": "context.append_loop_event", "event": {"type": "tool.result", "parentUuid": "call_2", "toolCallId": "call_2", "result": {"output": "", "note": "command failed: no such directory", "isError": true}}, "time": 1784794435000}
+{"type": "context.append_loop_event", "event": {"type": "content.part", "uuid": "p2", "turnId": "0", "step": 2, "part": {"type": "text", "text": "The docs live in docs/."}}, "time": 1784794436000}
+{"type": "context.append_loop_event", "event": {"type": "step.end", "uuid": "s2", "turnId": "0", "step": 2, "usage": {"inputOther": 16748, "output": 26, "inputCacheRead": 11264, "inputCacheCreation": 0}}, "time": 1784794437000}
+{"type": "usage.record", "model": "zai/glm-5.2", "usage": {"inputOther": 16748, "output": 26, "inputCacheRead": 11264, "inputCacheCreation": 0}, "usageScope": "turn", "time": 1784794444579}
+{"type": "turn.steer", "agentId": "main", "input": [{"type": "text", "text": "also check docs/old"}], "origin": {"kind": "user"}, "time": 1784794449000}
+{"type": "context.append_loop_event", "event": {"type": "step.begin", "uuid": "s3", "turnId": "0", "step": 3}, "time": 1784794449100}
+{"type": "context.append_loop_event", "event": {"type": "content.part", "uuid": "p3", "turnId": "0", "step": 3, "part": {"type": "text", "text": "Checking docs/old too."}}, "time": 1784794450000}
+{"type": "context.apply_compaction", "summary": "compacted earlier turns", "compactedCount": 10, "tokensBefore": 5000, "tokensAfter": 500, "time": 1784794451000}
+{"type": "turn.prompt", "input": [{"type": "text", "text": "now summarize"}], "origin": {"kind": "user"}, "time": 1784794452000}
+{"type": "context.append_loop_event", "event": {"type": "content.part", "uuid": "p4", "turnId": "1", "step": 1, "part": {"type": "text", "text": "Summary: demo project."}}, "time": 1784794453000}
+{"type": "prompt.completed", "agentId": "main", "promptId": "msg_1", "reason": "completed", "time": 1784794454000}

@@ -101,11 +101,11 @@ function num(v: unknown): number | undefined {
 	return Number.isFinite(n) ? n : undefined;
 }
 
-function parseSources(v: string): ("claude" | "codex" | "pi")[] {
-	const out: ("claude" | "codex" | "pi")[] = [];
+function parseSources(v: string): ("claude" | "codex" | "pi" | "qwen" | "kimi" | "minimax")[] {
+	const out: ("claude" | "codex" | "pi" | "qwen" | "kimi" | "minimax")[] = [];
 	for (const part of v.split(",")) {
 		const s = part.trim();
-		if (s === "claude" || s === "codex" || s === "pi") out.push(s);
+		if (s === "claude" || s === "codex" || s === "pi" || s === "qwen" || s === "kimi" || s === "minimax") out.push(s);
 	}
 	return out.length > 0 ? out : ["claude", "codex"];
 }

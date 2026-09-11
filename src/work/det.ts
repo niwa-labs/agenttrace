@@ -14,6 +14,9 @@ import type { CursorLogMeta } from "../sources/cursor/types.js";
 import { parseClaudeSession } from "../sources/claude/parse.js";
 import { parseCodexSession } from "../sources/codex/parse.js";
 import { parsePiSession } from "../sources/pi/parse.js";
+import { parseQwenSession } from "../sources/qwen/parse.js";
+import { parseKimiSession } from "../sources/kimi/parse.js";
+import { parseMinimaxSession } from "../sources/minimax/parse.js";
 import { parseCursorLog } from "../sources/cursor/parse.js";
 import { anchorTurn } from "../pipeline/anchors.js";
 import { accountSession, renderFacts, sealFacts } from "../pipeline/facts.js";
@@ -186,6 +189,12 @@ async function parseBySource(
 			return parseCodexSession(file);
 		case "pi":
 			return parsePiSession(file);
+		case "qwen":
+			return parseQwenSession(file);
+		case "kimi":
+			return parseKimiSession(file);
+		case "minimax":
+			return parseMinimaxSession(file);
 		case "cursor-ide":
 		case "cursor-agent": {
 			if (cursorMeta === undefined) throw new Error(`cursor log without meta: ${file}`);

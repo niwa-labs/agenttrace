@@ -46,6 +46,7 @@ export async function runWorkCli(argv: string[]): Promise<number> {
 						"claude-root": { type: "string", multiple: true },
 						"codex-root": { type: "string", multiple: true },
 						"pi-root": { type: "string", multiple: true },
+						"qwen-root": { type: "string", multiple: true },
 						"no-cursor": { type: "boolean", default: false },
 						"cursor-ide-db": { type: "string" },
 						"cursor-agent-root": { type: "string" },
@@ -62,6 +63,7 @@ export async function runWorkCli(argv: string[]): Promise<number> {
 				state.roots.claude = claudeRoots.map(expand);
 				state.roots.codex = (strs(values["codex-root"]) ?? []).map(expand);
 				state.roots.pi = piRoots.map(expand);
+				state.roots.qwen = (strs(values["qwen-root"]) ?? [join(homedir(), ".qwen", "projects")]).map(expand);
 				if (values["no-cursor"] !== true) {
 					state.cursorIde = {
 						db: expand(str(values["cursor-ide-db"]) ?? join(homedir(), "Library", "Application Support", "Cursor", "User", "globalStorage", "state.vscdb")),
@@ -234,6 +236,7 @@ function printWorkUsage(): void {
       --claude-root <dir> ...    корни логов claude (по умолчанию ~/.claude-my/projects, ~/.claude/projects)
       --codex-root <dir> ...     корни логов codex (по умолчанию выключены)
       --pi-root <dir> ...        корни логов pi (~/.pi/agent/sessions)
+      --qwen-root <dir> ...      корень логов qwen (~/.qwen/projects)
       --no-cursor                не импортировать Cursor (IDE + agent CLI)
       --only <substr>            оставить в реестре только логи с подстрокой
   raiseki work status --state <dir>                    счётчики по слоям/проектам

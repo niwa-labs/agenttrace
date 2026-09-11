@@ -13,7 +13,11 @@ import { discoverClaudeSessions } from "../sources/claude/discover.js";
 import { parseClaudeSession } from "../sources/claude/parse.js";
 import { discoverCodexSessions } from "../sources/codex/discover.js";
 import { parseCodexSession } from "../sources/codex/parse.js";
+import { parseQwenSession } from "../sources/qwen/parse.js";
+import { parseKimiSession } from "../sources/kimi/parse.js";
 import { discoverPiSessions } from "../sources/pi/discover.js";
+import { discoverQwenSessions } from "../sources/qwen/discover.js";
+import { discoverKimiSessions } from "../sources/kimi/discover.js";
 import { parsePiSession } from "../sources/pi/parse.js";
 import { DEFAULT_SEGMENT_OPTIONS, packWindows, segmentTurns, type Turn } from "./turns.js";
 import { anchorTurn, type TurnAnchors } from "./anchors.js";
@@ -370,6 +374,12 @@ async function discoverSessions(rootDir: string, sources: SourceKind[], only?: s
 	if (sources.includes("pi")) {
 		for (const f of await discoverPiSessions(rootDir)) files.push({ file: f, source: "pi" });
 	}
+	if (sources.includes("qwen")) {
+		for (const f of await discoverQwenSessions(rootDir)) files.push({ file: f, source: "qwen" });
+	}
+	if (sources.includes("kimi")) {
+		for (const f of await discoverKimiSessions(rootDir)) files.push({ file: f.logFile, source: "kimi" });
+	}
 	const picked = only !== undefined ? files.filter((f) => f.file.includes(only)) : files;
 	const sessions: NormalizedSession[] = [];
 	for (const { file, source } of picked) {
@@ -379,7 +389,11 @@ async function discoverSessions(rootDir: string, sources: SourceKind[], only?: s
 					? await parseClaudeSession(file)
 					: source === "codex"
 						? await parseCodexSession(file)
-						: await parsePiSession(file),
+						: source === "qwen"
+							? await parseQwenSession(file)
+							: source === "kimi"
+								? await parseKimiSession(file)
+								: await parsePiSession(file),
 			);
 		} catch (err) {
 			console.warn(`warn: failed to parse ${file}: ${err instanceof Error ? err.message : String(err)}`);

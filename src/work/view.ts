@@ -19,6 +19,9 @@ import type { CursorLogMeta } from "../sources/cursor/types.js";
 import { parseClaudeSession } from "../sources/claude/parse.js";
 import { parseCodexSession } from "../sources/codex/parse.js";
 import { parsePiSession } from "../sources/pi/parse.js";
+import { parseQwenSession } from "../sources/qwen/parse.js";
+import { parseKimiSession } from "../sources/kimi/parse.js";
+import { parseMinimaxSession } from "../sources/minimax/parse.js";
 import { parseCursorLog } from "../sources/cursor/parse.js";
 import type { DetSession } from "./det.js";
 import type { SessionRecord } from "./registry.js";
@@ -54,7 +57,13 @@ export async function parseBySource(
 				? await parseCodexSession(file)
 				: source === "pi"
 					? await parsePiSession(file)
-					: await parseCursorLog(file, cursorMeta ?? { sessionId: "unknown", source, msgCount: 0 });
+					: source === "qwen"
+						? await parseQwenSession(file)
+						: source === "kimi"
+							? await parseKimiSession(file)
+							: source === "minimax"
+								? await parseMinimaxSession(file)
+								: await parseCursorLog(file, cursorMeta ?? { sessionId: "unknown", source, msgCount: 0 });
 	return {
 		entries: session.entries,
 		logLines: session.logLines,

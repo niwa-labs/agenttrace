@@ -8,7 +8,7 @@
 
 import type { LogRef } from "../core/refs.js";
 
-export type SourceKind = "claude" | "codex" | "pi" | "cursor-ide" | "cursor-agent";
+export type SourceKind = "claude" | "codex" | "pi" | "cursor-ide" | "cursor-agent" | "kimi" | "minimax" | "qwen";
 
 /** Aggregated token usage as recorded by the source log (when it records it). */
 export interface UsageAgg {
