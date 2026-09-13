@@ -178,10 +178,51 @@ export async function runPass1Window(
 			lastValidatorError = `Валидатор отклонил ответ:\n${errors.map((e) => `- ${e}`).join("\n")}`;
 		}
 		if (block === undefined) {
+			// last resort: a FRESH agent session (only this turn, clean context).
+			// Four failed attempts in the shared session usually mean the model
+			// got stuck on stale context, not that the turn is uncompressible —
+			// a blank-slate retry recovers the thinking instead of dropping it.
+			try {
+				const fresh = new Agent({
+					initialState: {
+						systemPrompt: PASS1_SYSTEM_PROMPT,
+						model: agent.state.model,
+						tools: [],
+						messages: [],
+						thinkingLevel: "off",
+					},
+					streamFn: agent.streamFunction,
+				});
+				await fresh.prompt(promptText);
+				await fresh.waitForIdle();
+				countUsage(counters.usage, fresh);
+				const text = lastAssistantText(fresh);
+				const parsed = text !== undefined ? extractJsonObject(text) : undefined;
+				const errors = parsed === undefined ? ["response contains no JSON object"] : validatePass1Block(parsed, ctx);
+				if (errors.length === 0 && parsed !== undefined) {
+					block = asPass1Block(parsed);
+					retries++;
+					counters.retries += 1;
+				}
+			} catch {
+				// fresh-session retry is best-effort; det fallback below still holds
+			}
+		}
+		if (block === undefined) {
 			fallback = true;
+			// honest floor: keep whatever the deterministic layer knows. If the
+			// turn carries thinking, surface the quote ids and a head of the
+			// text in the action instead of losing it silently.
+			const thinkingHead = turn.entries
+				.filter((e) => e.kind === "assistant_thinking" && e.text.trim().length > 0)
+				.map((e) => (e as { text: string }).text.replace(/\s+/g, " ").slice(0, 200))
+				.filter((t) => t.length > 0)
+				.join(" | ");
 			block = {
 				anchor: { fromLine: turn.fromLine, toLine: turn.toLine },
-				action: detFallbackAction(turn),
+				action: thinkingHead.length > 0
+					? `${detFallbackAction(turn)}; thinking: ${thinkingHead}`
+					: detFallbackAction(turn),
 				thoughts: [],
 				fallback: true,
 			};

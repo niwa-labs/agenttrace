@@ -96,3 +96,41 @@ describe("codex forked rollouts", () => {
 		expect(s.tokenUsage?.outputTokens).toBe(120); // 50 + 70
 	});
 });
+
+describe("codex agent_message envelopes", () => {
+	it("strips envelope boilerplate, marks hidden payloads, keeps real payload text", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "sd-codex-am-"));
+		const file = join(dir, "rollout-am.jsonl");
+		const lines = [
+			meta("am-session", "/proj/demo"),
+			JSON.stringify({
+				type: "response_item",
+				timestamp: T1,
+				payload: {
+					type: "agent_message",
+					author: "/root",
+					content: [{ type: "input_text", text: "Message Type: NEW_TASK\nTask name: /root/cardinals\nSender: /root\nPayload:\n" }],
+				},
+			}),
+			JSON.stringify({
+				type: "response_item",
+				timestamp: T1,
+				payload: {
+					type: "agent_message",
+					author: "/root",
+					content: [
+						{ type: "input_text", text: "Message Type: FINAL_ANSWER\nTask name: /root\nSender: /root/a\nPayload:\n[COMPLETE] done" },
+						{ type: "encrypted_content", encrypted_content: "gAAAA" },
+					],
+				},
+			}),
+		];
+		await writeFile(file, lines.join("\n") + "\n", "utf8");
+		const session = await parseCodexSession(file);
+		const notes = session.entries.filter((e) => e.kind === "system_note" && e.subtype === "agent_message");
+		expect(notes).toHaveLength(2);
+		expect(notes[0]).toMatchObject({ text: "[NEW_TASK] empty payload (sender /root)" });
+		expect((notes[1] as { text: string }).text).toContain("[FINAL_ANSWER] [COMPLETE] done");
+		expect((notes[1] as { text: string }).text).not.toContain("Task name:");
+	});
+});

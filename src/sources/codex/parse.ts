@@ -189,13 +189,30 @@ function parseResponseItem(
 	if (!p) return;
 	switch (p["type"]) {
 		case "agent_message": {
-			// inter-agent mail (NEW_TASK, …): visible head + note that payload may be encrypted
+			// inter-agent mail (NEW_TASK, …). The envelope is template boilerplate
+			// ("Message Type: X / Task name: … / Sender: … / Payload:") — keep the
+			// discriminating fields and the actual payload, drop the boilerplate;
+			// encrypted or empty payloads become an explicit "payload hidden" note
+			// so N identical envelopes collapse instead of spamming the trace.
 			const text = flattenContent(p["content"]);
 			if (text.length === 0) break;
+			const envelope = /^(Message Type:\s*(\S+)[\s\S]*?Payload:\s*\n?)([\s\S]*)$/.exec(text);
+			const kind = envelope?.[2];
+			const body = envelope?.[3]?.trim() ?? "";
+			const contentStr = JSON.stringify(p["content"]);
+			const encrypted = contentStr.includes("encrypted_content");
+			let note: string;
+			if (body.length > 0) {
+				note = envelope !== null ? `[${kind ?? "message"}] ${body}` : text;
+			} else if (encrypted) {
+				note = `[${kind ?? "message"}] payload encrypted/hidden (sender ${typeof p["author"] === "string" ? p["author"] : "?"})`;
+			} else {
+				note = `[${kind ?? "message"}] empty payload (sender ${typeof p["author"] === "string" ? p["author"] : "?"})`;
+			}
 			out.push({
 				kind: "system_note",
 				subtype: "agent_message",
-				text: text.slice(0, 300),
+				text: note.slice(0, 300),
 				timestamp: ts,
 				logLine: line,
 				sidechain: false,

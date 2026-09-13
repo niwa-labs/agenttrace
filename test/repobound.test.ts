@@ -20,4 +20,17 @@ describe("toRepoBound", () => {
 		expect(out).toContain("distill ~… → ok");
 		expect(out).toContain("~/x.txt");
 	});
+
+	it("removes bare @L glyphs left after anchored ranges collapse", () => {
+		// arc lines like "H [refuted] … @L101→L175" and thoughts "@L" with no digits
+		const md = [
+			"- **H** [refuted] bad guess @L101→L175",
+			"💭 ?: keep the anchor? @L",
+			"- сессия @L → pointer line handled separately",
+		].join("\n");
+		const out = toRepoBound(md);
+		expect(out).not.toContain("@L");
+		expect(out).toContain("bad guess");
+		expect(out).toContain("keep the anchor?");
+	});
 });

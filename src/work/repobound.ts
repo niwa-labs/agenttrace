@@ -23,8 +23,10 @@ export function toRepoBound(traceMd: string, projectDir?: string, home: string =
 	s = s.replace(/^> `@L<n>`.*$\n/gm, "");
 	// frontmatter: the absolute private log path
 	s = s.replace(/^\s*logFile: .*$/gm, "");
-	// every remaining @L reference (line anchors are private coordinates)
+	// every @L anchor, fully — bare `@L` glyphs left by ranges/arcs would read
+	// as noise, and without the log there is nothing to point at
 	s = s.replace(/ ?@L\d+(?:(?:–|→|-\|?)L\d+)?/g, "");
+	s = s.replace(/ ?@L(?=[^\w]|\b)/g, "");
 	// absolute project paths → repo-relative
 	if (projectDir) {
 		const clean = projectDir.replace(/\/+$/, "");

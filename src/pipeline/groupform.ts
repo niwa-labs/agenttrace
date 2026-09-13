@@ -96,12 +96,24 @@ export function renderGroupedTurn(input: TurnFormInput, level: DegradeLevel = 0)
 	}
 	lines.push(...collapseIdentical(rendered));
 
-	// inter-agent mail and notes (NEW_TASK etc.) are trace-worthy events
+	// inter-agent mail and notes (NEW_TASK etc.) are trace-worthy events.
+	// Identical consecutive template notes ("[NEW_TASK] payload encrypted/hidden",
+	// empty-payload runs) collapse to ×N — a run of identical envelopes is noise.
+	const notes: string[] = [];
 	for (const e of entries) {
-		if (e.kind === "system_note" && (e.subtype === "agent_message" || e.subtype === "pr-link")) {
-			lines.push(`[NOTE ${e.subtype}] ${e.text.slice(0, 200)} @L${e.logLine}`);
+		if (e.kind !== "system_note" || (e.subtype !== "agent_message" && e.subtype !== "pr-link")) continue;
+		const line = `[NOTE ${e.subtype}] ${e.text.slice(0, 200)} @L${e.logLine}`;
+		const prev = notes[notes.length - 1];
+		const prevBase = prev?.replace(/ @L\d+$/, "").replace(/ ×\d+$/, "");
+		const thisBase = line.replace(/ @L\d+$/, "");
+		if (prev !== undefined && prevBase === thisBase) {
+			const m = / ×(\d+)$/.exec(prev);
+			notes[notes.length - 1] = `${prevBase} ×${m ? Number(m[1]) + 1 : 2} @L${e.logLine}`;
+			continue;
 		}
+		notes.push(line);
 	}
+	lines.push(...notes);
 
 	// pass-1 narrative as the turn's micro-summary line
 	const fb = block.fallback === true ? " [fallback]" : "";
