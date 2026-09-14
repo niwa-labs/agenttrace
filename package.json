@@ -1,5 +1,5 @@
 {
-	"name": "raiseki",
+	"name": "@niwa-labs/raiseki",
 	"version": "1.0.0",
 	"description": "Compresses coding-agent session logs (Claude Code, Codex CLI, pi, Cursor, Qwen Code, Kimi, MiniMax Code) into token-efficient MD traces with lossless @L references for LLM analysis",
 	"type": "module",
