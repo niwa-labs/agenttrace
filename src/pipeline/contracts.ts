@@ -28,11 +28,25 @@ export interface Pass1Block {
 	fallback?: boolean;
 }
 
+export interface DigestCheckpoint {
+	intent: string;
+	concepts: string;
+	files: string;
+	errors: string;
+	pending: string;
+	current: string;
+	next: string;
+	critical: string;
+}
+
 export interface Pass1Digest {
 	goal: string;
 	openHypotheses: { text: string; q?: string }[];
 	currentBelief: string;
 	naming?: string[];
+	/** deepseek-style checkpoint skeleton; empty string = "(none)". Optional for
+	 *  backward compatibility with sidecars written before this field existed. */
+	checkpoint?: DigestCheckpoint;
 }
 
 export interface Pass2Arc {
@@ -194,6 +208,20 @@ export function validatePass1Digest(v: unknown): Errors {
 		}
 	}
 	if (!str(v["currentBelief"])) errors.push("missing string 'currentBelief'");
+	if (v["checkpoint"] !== undefined) {
+		const c = v["checkpoint"];
+		if (!isObj(c)) {
+			errors.push("checkpoint must be an object");
+		} else {
+			const fields = ["intent", "concepts", "files", "errors", "pending", "current", "next", "critical"];
+			for (const f of fields) {
+				const val = c[f];
+				if (val === undefined) continue; // absent = "(none)" on read
+				if (!str(val)) errors.push(`checkpoint.${f} must be a string`);
+				else if (val.length > 600) errors.push(`checkpoint.${f} exceeds 600 chars`);
+			}
+		}
+	}
 	return errors;
 }
 
@@ -278,6 +306,20 @@ export function asPass1Digest(v: unknown): Pass1Digest {
 		})),
 		currentBelief: d.currentBelief,
 		...(d.naming !== undefined ? { naming: d.naming } : {}),
+		...(d.checkpoint !== undefined
+			? {
+					checkpoint: {
+						intent: d.checkpoint.intent ?? "",
+						concepts: d.checkpoint.concepts ?? "",
+						files: d.checkpoint.files ?? "",
+						errors: d.checkpoint.errors ?? "",
+						pending: d.checkpoint.pending ?? "",
+						current: d.checkpoint.current ?? "",
+						next: d.checkpoint.next ?? "",
+						critical: d.checkpoint.critical ?? "",
+					},
+				}
+			: {}),
 	};
 }
 

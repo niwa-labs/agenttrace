@@ -240,7 +240,11 @@ export async function runPass1Window(
 		const text = lastAssistantText(agent);
 		const parsed = text !== undefined ? extractJsonObject(text) : undefined;
 		const errors = parsed === undefined ? ["no JSON in digest reply"] : validatePass1Digest(parsed);
-		if (errors.length === 0 && parsed !== undefined) {
+		// sanity gate: a digest runaway (comparable to the window it summarizes)
+		// defeats the purpose — fall back to the deterministic skeleton
+		if (errors.length === 0 && parsed !== undefined && text.length > 4000) {
+			digest = detDigest(window);
+		} else if (errors.length === 0 && parsed !== undefined) {
 			digest = asPass1Digest(parsed);
 			counters.digests++;
 		} else {
@@ -255,8 +259,19 @@ const DIGEST_PROMPT = `Окно сжато. Выдай JSON-дайджест о�
   "goal": "<что делается, ≤200 символов>",
   "openHypotheses": [{"text": "<нерешённая гипотеза>", "q": "<q-id, если есть>"}],
   "currentBelief": "<текущая картина мира, ≤300 символов>",
-  "naming": ["<как названы ключевые сущности>"]
-}`;
+  "naming": ["<как названы ключевые сущности>"],
+  "checkpoint": {
+    "intent": "<запрос/намерение оператора, ≤400 символов или пусто>",
+    "concepts": "<ключевые технические концепции окна, ≤400 или пусто>",
+    "files": "<затронутые файлы/пути через запятую, ≤400 или пусто>",
+    "errors": "<ошибки и как решены, ≤400 или пусто>",
+    "pending": "<незавершённые задачи, ≤400 или пусто>",
+    "current": "<что происходило прямо в этом окне, ≤400 или пусто>",
+    "next": "<очевидный следующий шаг, ≤400 или пусто>",
+    "critical": "<критический контекст без которого продолжение сломается, ≤400 или пусто>"
+  }
+}
+Правила checkpoint: консолидируй с предыдущим digest — если в нём уже был checkpoint, ИСТИННОЕ оставь, УСТАРЕВШЕЕ выбрось, новое добавь (не копируй дословно); пустая секция = пустая строка. Весь digest должен быть заметно короче окна.`;
 
 function countUsage(usage: { requests: number; inputTokens: number; outputTokens: number }, agent: Agent): void {
 	for (let i = agent.state.messages.length - 1; i >= 0; i--) {
@@ -301,5 +316,15 @@ function detDigest(window: Window): Pass1Digest {
 		goal: `(окно ${window.index}: модель не выдала digest)`,
 		openHypotheses: [],
 		currentBelief: "(неизвестно — детерминированный digest)",
+		checkpoint: {
+			intent: "",
+			concepts: "",
+			files: "",
+			errors: "",
+			pending: "",
+			current: "",
+			next: "",
+			critical: "",
+		},
 	};
 }
