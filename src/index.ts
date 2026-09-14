@@ -69,27 +69,27 @@ function parse(): Parsed {
 }
 
 function printUsage(): void {
-	console.log(`raiseki — сжатые трейсы агентских сессий
+	console.log(`raiseki — compressed traces of coding-agent sessions
 
-Использование:
-  raiseki distill [rootDir] [options]     детерминированный трейс-скелет (без LLM)
-    --out <dir>          куда писать (по умолчанию ./traces)
-    --source <list>      claude,codex,pi,qwen,kimi,minimax (по умолчанию claude,codex)
-    --no-chain           не сливать связанные сессии
-    --chain-gap <min>    зазор для слияния, минут (45)
-    --repo-bound         вариант для коммита в репозиторий: без @L-якорей и абсолютных путей
+Usage:
+  raiseki distill [rootDir] [options]     deterministic trace skeleton (no LLM)
+    --out <dir>          where to write (default ./traces)
+    --source <list>      claude,codex,pi,qwen,kimi,minimax (default claude,codex)
+    --no-chain           do not merge related sessions
+    --chain-gap <min>    merge gap in minutes (45)
+    --repo-bound         repository-commit flavor: no @L anchors, no absolute paths
 
-  raiseki refine [rootDir] [options]      полный: FAST-проход + SMART + банк
-    --fast-model <p/id>  простая модель ($RAISEKI_FAST_MODEL; по умолчанию = --model)
-    --model <p/id>       умная модель ($RAISEKI_MODEL; anthropic/claude-sonnet-4-5)
-    --base-url <url>     OpenAI-совместимый эндпоинт ($RAISEKI_BASE_URL)
-    --api-key <key>      ключ ($RAISEKI_API_KEY, по умолчанию stub)
-    --window-tokens <n>  окно pass-1 в токенах (40000)
-    --turn-tokens <n>    бюджет хода (8000)
-    --source <list>      claude,codex,pi,qwen,kimi,minimax (по умолчанию claude,codex,pi)
+  raiseki refine [rootDir] [options]      full: FAST pass + SMART + bank
+    --fast-model <p/id>  fast model ($RAISEKI_FAST_MODEL; defaults to --model)
+    --model <p/id>       smart model ($RAISEKI_MODEL; anthropic/claude-sonnet-4-5)
+    --base-url <url>     OpenAI-compatible endpoint ($RAISEKI_BASE_URL)
+    --api-key <key>      API key ($RAISEKI_API_KEY, default stub)
+    --window-tokens <n>  pass-1 window in tokens (40000)
+    --turn-tokens <n>    per-turn budget (8000)
+    --source <list>      claude,codex,pi,qwen,kimi,minimax (default claude,codex,pi)
     --max <n> / --only <substr>
 
-Общее: обе команды матчат сессии по cwd (текущая директория и поддиры).
+Common: both commands match sessions by cwd (the current directory and its subdirectories).
 `);
 }
 
@@ -135,11 +135,11 @@ async function main(): Promise<void> {
 			...(only !== undefined ? { only } : {}),
 			...(values["repo-bound"] === true ? { repoBound: true } : {}),
 		});
-		console.log(`просмотрено логов: ${report.logsScanned}, распарсено: ${report.logsParsed}`);
-		console.log(`трейсов: ${report.traces.length} → ${outDir}`);
+		console.log(`logs scanned: ${report.logsScanned}, parsed: ${report.logsParsed}`);
+		console.log(`traces: ${report.traces.length} → ${outDir}`);
 		for (const t of report.traces) {
 			console.log(
-				`  ${basename(t.file)}  [${t.kind}] sessions=${t.sessions} tools=${t.toolCalls} ~${t.tokensTrace} tok (из ~${t.tokensOriginal}, ×${t.ratio}) verdict=${t.verdict}`,
+				`  ${basename(t.file)}  [${t.kind}] sessions=${t.sessions} tools=${t.toolCalls} ~${t.tokensTrace} tok (of ~${t.tokensOriginal}, ×${t.ratio}) verdict=${t.verdict}`,
 			);
 		}
 		return;
@@ -168,10 +168,10 @@ async function main(): Promise<void> {
 		...(only !== undefined ? { only } : {}),
 	});
 	console.log(`fast: ${fastModel ?? smartModel} · smart: ${smartModel}`);
-	console.log(`трейсов: ${reports.length} → ${outDir}`);
+	console.log(`traces: ${reports.length} → ${outDir}`);
 	for (const r of reports) {
 		console.log(
-			`  ${r.file}: ходов ${r.turns}, покрытие ${r.coverage}, ×${r.ratio}, fallback ${r.fallbacks}, споров ${r.disputes}${r.verdict !== undefined ? `, вердикт: ${r.verdict}` : ""}`,
+			`  ${r.file}: turns ${r.turns}, coverage ${r.coverage}, ×${r.ratio}, fallback ${r.fallbacks}, disputes ${r.disputes}${r.verdict !== undefined ? `, verdict: ${r.verdict}` : ""}`,
 		);
 	}
 }

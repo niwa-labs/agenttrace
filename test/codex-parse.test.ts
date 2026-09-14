@@ -12,7 +12,7 @@ describe("codex parser", () => {
 		expect(s.sessionId).toBe("codex-0001");
 		expect(s.cwd).toBe("/proj/demo");
 		expect(s.model).toBe("gpt-5-codex");
-		expect(s.firstPrompt).toBe("собери проект и поправь версию");
+		expect(s.firstPrompt).toBe("build the project and bump the version");
 		expect(s.role).toBe("main");
 	});
 

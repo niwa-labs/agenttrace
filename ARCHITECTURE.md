@@ -106,5 +106,10 @@ Persistent, never rolled back. Items follow the ReasoningBank schema (`{title, d
 | Claude Code | `~/.claude/projects/<escaped-cwd>/*.jsonl` | usually empty (signature-only) |
 | Codex CLI | `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` | encrypted (`encrypted_content`) |
 | pi | `~/.pi/agent/sessions/--<escaped-cwd>--/*.jsonl` | full text, the richest source |
+| Qwen Code | `~/.qwen/projects/<escaped-cwd>/chats/*.jsonl` | full text (`thought:true` parts) |
+| Kimi CLI / Kimi Code | `~/.kimi/sessions/**/wire.jsonl`, `~/.kimi-code/sessions/**/wire.jsonl` | full text (`think` parts) |
+| MiniMax Code (mcode) | `~/.minimax/v2/sessions/**/messages.jsonl` | full text (`thinking` blocks) |
+| Cursor IDE | `state.vscdb` (cursorDiskKV), exported to line-addressable JSONL by `work init` | `bubble.thinking` |
+| cursor-agent CLI | `~/.cursor/chats/*/store.db`, exported by `work init` | — |
 
 All adapters produce the same `NormalizedSession` shape (`src/model/session.ts`). The pipeline is source-agnostic.

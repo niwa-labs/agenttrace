@@ -257,7 +257,7 @@ function claudeSidechainSection(
 		lineFrom: run.lineFrom,
 		lineTo: run.lineTo,
 		parentSessionIndex,
-		summary: `сабагент: вызовов ${run.calls}${run.errors > 0 ? `, ошибок ${run.errors}` : ""}, строки @L${run.lineFrom}–L${run.lineTo} лога родителя`,
+		summary: `subagent: ${run.calls} calls${run.errors > 0 ? `, ${run.errors} errors` : ""}, lines @L${run.lineFrom}–L${run.lineTo} of the parent log`,
 		...(run.firstText !== undefined ? { firstText: run.firstText } : {}),
 	};
 }
@@ -275,7 +275,7 @@ function codexSubagentSection(
 		sessionId: sub.sessionId,
 		logFile: sub.logFile,
 		parentSessionIndex,
-		summary: `codex-сабагент: вызовов ${calls}${errors > 0 ? `, ошибок ${errors}` : ""}; лог ${sub.logFile}`,
+		summary: `codex subagent: ${calls} calls${errors > 0 ? `, ${errors} errors` : ""}; log ${sub.logFile}`,
 		...(sub.firstPrompt !== undefined ? { firstText: sub.firstPrompt } : {}),
 	};
 }
@@ -312,42 +312,42 @@ function deterministicVerdict(input: {
 	if (input.interrupted) {
 		return {
 			status: "partial",
-			why: "есть прерванные вызовы инструментов — сессия могла не дойти до конца задачи",
+			why: "there are interrupted tool calls — the session may not have reached the end of the task",
 			origin: "deterministic",
 		};
 	}
 	if (input.checks.run > 0 && input.checks.failed > 0) {
 		return {
 			status: "failure",
-			why: `последний прогон проверок: ${input.checks.failed} failed из ${input.checks.run}`,
+			why: `last checks run: ${input.checks.failed} failed out of ${input.checks.run}`,
 			origin: "deterministic",
 		};
 	}
 	if (input.lastToolResultError) {
 		return {
 			status: "failure",
-			why: "последний вызов инструмента завершился ошибкой",
+			why: "the last tool call ended with an error",
 			origin: "deterministic",
 		};
 	}
 	if (input.checksEverFailed) {
 		return {
 			status: "partial",
-			why: "в ходе сессии были падения проверок, последний прогон зелёный",
+			why: "checks failed during the session; the last run is green",
 			origin: "deterministic",
 		};
 	}
 	if (input.toolErrors > 0) {
 		return {
 			status: "partial",
-			why: `ошибки инструментов: ${input.toolErrors} (без падений проверок)`,
+			why: `tool errors: ${input.toolErrors} (no check failures)`,
 			origin: "deterministic",
 		};
 	}
 	if (input.toolCalls === 0) {
 		return {
 			status: "unknown",
-			why: "вызовов инструментов не было — диалог без действий",
+			why: "no tool calls — a conversation without actions",
 			origin: "deterministic",
 		};
 	}
@@ -355,8 +355,8 @@ function deterministicVerdict(input: {
 		status: input.checks.run > 0 ? "success" : "unknown",
 		why:
 			input.checks.run > 0
-				? `ошибок инструментов нет; проверки выполнены (${input.checks.run}) и зелёные`
-				: "ошибок инструментов нет; автоматических проверок не обнаружено",
+				? `no tool errors; checks ran (${input.checks.run}) and are green`
+				: "no tool errors; no automated checks detected",
 		origin: "deterministic",
 	};
 }

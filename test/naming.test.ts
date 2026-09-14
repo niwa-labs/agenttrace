@@ -11,9 +11,9 @@ describe("naming slugify", () => {
 		expect(slugify("Fix  Auth -- Bug!!!")).toBe("fix-auth-bug"); // runs collapse to one dash
 	});
 
-	it("keeps cyrillic letters", () => {
-		expect(slugify("Починить тесты в apps/dist")).toBe("починить-тесты-в-apps-dist");
-		expect(slugify("Рефакторинг v2 API")).toBe("рефакторинг-v2-api");
+	it("keeps digits and drops non-latin letters", () => {
+		expect(slugify("Fix the tests in apps/dist")).toBe("fix-the-tests-in-apps-dist");
+		expect(slugify("Refactor v2 API")).toBe("refactor-v2-api");
 	});
 
 	it("strips leading and trailing separators", () => {

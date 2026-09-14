@@ -16,7 +16,7 @@ describe("qwen parser", () => {
 		expect(s.cwd).toBe("/proj/demo");
 		expect(s.gitBranch).toBe("main");
 		expect(s.role).toBe("main");
-		expect(s.firstPrompt).toBe("почини импорт в src/main.ts");
+		expect(s.firstPrompt).toBe("fix the import in src/main.ts");
 		expect(s.logLines).toBe(10);
 		expect(s.startedAt).toBe("2026-09-01T10:00:00.000Z");
 		expect(s.endedAt).toBe("2026-09-01T10:01:20.000Z");
@@ -47,12 +47,12 @@ describe("qwen parser", () => {
 			(e): e is TextEntry & { kind: "assistant_thinking" } => e.kind === "assistant_thinking",
 		);
 		expect(thoughts).toHaveLength(2);
-		expect(thoughts[0]?.text).toContain("гипотеза — tsconfig paths");
+		expect(thoughts[0]?.text).toContain("hypothesis — tsconfig paths");
 		expect(thoughts[0]?.logLine).toBe(3);
 		const texts = s.entries.filter(
 			(e): e is TextEntry & { kind: "assistant_text" } => e.kind === "assistant_text",
 		);
-		expect(texts.map((t) => t.text)).toEqual(["Сейчас посмотрю файл.", "Готово: импорт исправлен."]);
+		expect(texts.map((t) => t.text)).toEqual(["I will look at the file now.", "Done: import fixed."]);
 	});
 
 	it("pairs tool calls with results by functionCall id", async () => {
@@ -96,7 +96,7 @@ describe("qwen parser", () => {
 			(e): e is TextEntry & { kind: "user_text" } => e.kind === "user_text",
 		);
 		expect(prompts).toHaveLength(1);
-		expect(prompts[0]?.text).toBe("почини импорт в src/main.ts");
+		expect(prompts[0]?.text).toBe("fix the import in src/main.ts");
 		const injected = s.entries.find((e) => e.kind === "system_note" && e.subtype === "system");
 		expect(injected?.kind === "system_note" && injected.text).toContain("<task-notification>");
 	});

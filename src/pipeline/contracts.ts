@@ -307,18 +307,22 @@ export function asPass1Digest(v: unknown): Pass1Digest {
 		currentBelief: d.currentBelief,
 		...(d.naming !== undefined ? { naming: d.naming } : {}),
 		...(d.checkpoint !== undefined
-			? {
-					checkpoint: {
-						intent: d.checkpoint.intent ?? "",
-						concepts: d.checkpoint.concepts ?? "",
-						files: d.checkpoint.files ?? "",
-						errors: d.checkpoint.errors ?? "",
-						pending: d.checkpoint.pending ?? "",
-						current: d.checkpoint.current ?? "",
-						next: d.checkpoint.next ?? "",
-						critical: d.checkpoint.critical ?? "",
-					},
-				}
+			? (() => {
+					// sections may be missing in model output despite the typed shape
+					const c = d.checkpoint as Partial<DigestCheckpoint>;
+					return {
+						checkpoint: {
+							intent: c.intent ?? "",
+							concepts: c.concepts ?? "",
+							files: c.files ?? "",
+							errors: c.errors ?? "",
+							pending: c.pending ?? "",
+							current: c.current ?? "",
+							next: c.next ?? "",
+							critical: c.critical ?? "",
+						},
+					};
+				})()
 			: {}),
 	};
 }

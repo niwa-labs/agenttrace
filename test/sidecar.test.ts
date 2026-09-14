@@ -44,7 +44,7 @@ function digestRec(overrides: Partial<DigestRecord> = {}): DigestRecord {
 		logFile: "session.jsonl",
 		windowIndex: 1,
 		sliceHash: "bbb",
-		digest: { goal: "починить тесты" },
+		digest: { goal: "fix the tests" },
 		ts: "2026-01-01T00:00:00.000Z",
 		...overrides,
 	};
@@ -85,7 +85,7 @@ describe("v2 sidecar", () => {
 		expect(rec2.retries).toBe(2);
 
 		const digests = await readSidecarDigests(logFile);
-		expect([...digests.entries()]).toEqual([[1, { goal: "починить тесты" }]]);
+		expect([...digests.entries()]).toEqual([[1, { goal: "fix the tests" }]]);
 	});
 
 	it("appends across calls without losing earlier records", async () => {
@@ -145,7 +145,7 @@ describe("v2 sidecar", () => {
 
 	it("sliceHashOf is stable and input-sensitive", () => {
 		expect(sliceHashOf("the same slice")).toBe(sliceHashOf("the same slice"));
-		expect(sliceHashOf("привет мир срез")).toBe(sliceHashOf("привет мир срез"));
+		expect(sliceHashOf("hello world slice")).toBe(sliceHashOf("hello world slice"));
 		expect(sliceHashOf("a")).not.toBe(sliceHashOf("b"));
 		expect(sliceHashOf("abc")).not.toBe(sliceHashOf("abd"));
 		expect(sliceHashOf("abc")).not.toBe(sliceHashOf("abcd"));

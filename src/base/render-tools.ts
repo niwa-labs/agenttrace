@@ -44,7 +44,7 @@ export function renderCall(call: ToolCallEntry, result: ToolResultEntry | undefi
 			? `@L${result.logLine}`
 			: undefined;
 
-	const fact = result ? renderFact(call, result) : "нет результата";
+	const fact = result ? renderFact(call, result) : "no result";
 	const parts = [`\`${name}\``];
 	if (sig.length > 0) parts.push(sig);
 	parts.push(callRef);
@@ -73,7 +73,7 @@ function displayName(name: string): string {
 }
 
 function renderFact(call: ToolCallEntry, result: ToolResultEntry): string {
-	if (result.interrupted) return "прервано";
+	if (result.interrupted) return "interrupted";
 	if (result.isError) {
 		const body = stripIfExec(result.content).body;
 		return `ERR ${firstLine(body, 140)}`;

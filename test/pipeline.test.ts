@@ -19,14 +19,14 @@ describe("v2 turns", () => {
 	it("packs whole turns into windows; never splits a turn", async () => {
 		const { segmentTurns, packWindows } = await import("../src/pipeline/turns.js");
 		const entries: SessionEntry[] = [
-			user("почини тесты", 1),
-			think("смотрю тесты", 2),
+			user("fix the tests", 1),
+			think("looking at the tests", 2),
 			call("c1", "Read", 3),
 			result("c1", "file body", 4),
-			think("нашёл", 5),
+			think("found it", 5),
 			call("c2", "Edit", 6),
 			result("c2", "ok", 7),
-			user("ещё", 8),
+			user("more", 8),
 			call("c3", "Bash", 9),
 			result("c3", "passed", 10),
 		];
@@ -53,7 +53,7 @@ describe("v2 anchors", () => {
 	it("assigns stable quote ids to thinking and narration; gate checks membership", async () => {
 		const { segmentTurns } = await import("../src/pipeline/turns.js");
 		const { anchorTurn, quoteBelongsTo } = await import("../src/pipeline/anchors.js");
-		const entries = [user("t", 1), think("гипотеза: дело в моке", 2), { kind: "assistant_text", text: "смотрю", timestamp: "t", logLine: 3, sidechain: false } as SessionEntry];
+		const entries = [user("t", 1), think("hypothesis: it is the mock", 2), { kind: "assistant_text", text: "looking", timestamp: "t", logLine: 3, sidechain: false } as SessionEntry];
 		const turns = segmentTurns(entries);
 		const anchors = anchorTurn(turns[1] as NonNullable<typeof turns[1]>);
 		expect(anchors.quotes).toHaveLength(2);
@@ -75,7 +75,7 @@ describe("v2 gate", () => {
 		const { sealFacts } = await import("../src/pipeline/facts.js");
 		const entries: SessionEntry[] = [
 			user("run tests", 1),
-			think("думаю", 2),
+			think("thinking", 2),
 			call("c1", "Bash", 3),
 			result("c1", "Tests: 2 failed | 8 passed (10)", 4, true),
 		];
@@ -86,8 +86,8 @@ describe("v2 gate", () => {
 
 		const block = {
 			anchor: { fromLine: 99, toLine: 200 }, // outside the turn → corrected
-			action: "прогнал тесты",
-			thoughts: [{ kind: "H" as const, source: "thinking" as const, text: "думаю о моке", q: "qffffff" }],
+			action: "ran the tests",
+			thoughts: [{ kind: "H" as const, source: "thinking" as const, text: "thinking about the mock", q: "qffffff" }],
 			factsClaimed: { checks: { run: 10, failed: 3 } },
 		};
 		const gate = gateBlock(block, anchors, sealed);
@@ -109,7 +109,7 @@ describe("v2 groupform", () => {
 		const { renderGroupedTurns } = await import("../src/pipeline/groupform.js");
 		const entries: SessionEntry[] = [
 			user("t", 1),
-			think("мысль: проверяем два раза", 2),
+			think("idea: checking twice", 2),
 			call("c1", "Bash", 3),
 			result("c1", "ok: build done", 4),
 			call("c2", "Bash", 5),
@@ -121,15 +121,15 @@ describe("v2 groupform", () => {
 		const anchors = anchorTurn(turn);
 		const block = {
 			anchor: { fromLine: turn.fromLine, toLine: turn.toLine },
-			action: "дважды билдил, потом упал",
-			thoughts: [{ kind: "INSIGHT" as const, source: "thinking" as const, text: "проверяем два раза", q: anchors.quotes[0]?.q ?? "q000000" }],
+			action: "built twice, then it failed",
+			thoughts: [{ kind: "INSIGHT" as const, source: "thinking" as const, text: "checking twice", q: anchors.quotes[0]?.q ?? "q000000" }],
 		};
 		const text = renderGroupedTurns([{ turn, anchors, entries, block, disputes: [] }]);
 		expect(text).toContain("💭 INSIGHT");
 		expect(text).toContain("×2");
 		// ERR→ok transition is not collapsed into the ×2 run
 		expect(text).toContain("ERR: boom");
-		expect(text).toContain("→ дважды билдил, потом упал");
+		expect(text).toContain("→ built twice, then it failed");
 	});
 });
 
@@ -139,13 +139,13 @@ describe("v2 contracts", () => {
 		const ctx = { fromLine: 10, toLine: 20, quoteIds: new Set(["qabc123"]) };
 		const good = {
 			anchor: { fromLine: 10, toLine: 20 },
-			action: "делал",
-			thought: { kind: "H", source: "thinking", text: "гипотеза", q: "qabc123" },
+			action: "did stuff",
+			thought: { kind: "H", source: "thinking", text: "hypothesis", q: "qabc123" },
 		};
 		const errs = validatePass1Block(good, ctx);
 		expect(errs).toEqual([]);
 
-		const bad = extractJsonObject('вот: ```json\n{"anchor":{"fromLine":5,"toLine":99},"action":"x","thought":{"kind":"NOPE","source":"thinking","text":"y","q":"qzzzzzz"}}\n```');
+		const bad = extractJsonObject('here: ```json\n{"anchor":{"fromLine":5,"toLine":99},"action":"x","thought":{"kind":"NOPE","source":"thinking","text":"y","q":"qzzzzzz"}}\n```');
 		const errors = validatePass1Block(bad, ctx);
 		expect(errors.some((e) => e.startsWith("anchor_out_of_block"))).toBe(true);
 		expect(errors.some((e) => e.includes("thought.kind"))).toBe(true);

@@ -110,13 +110,13 @@ describe("work server", () => {
 				blocks: job.turns.map((t) => ({
 					turnIndex: t.turnIndex,
 					anchor: { fromLine: t.fromLine, toLine: t.toLine },
-					action: `сжатый ход ${t.turnIndex} для теста`,
+					action: `compressed turn ${t.turnIndex} for the test`,
 					thoughts:
 						t.thoughtQs.length > 0
-							? [{ kind: "INSIGHT", source: "thinking", text: "суть мысли из фикстуры", q: t.thoughtQs[0] }]
+							? [{ kind: "INSIGHT", source: "thinking", text: "the gist of the thought from the fixture", q: t.thoughtQs[0] }]
 							: [],
 				})),
-				...(job.isLastWindow ? {} : { digest: { goal: "тестовая цель", openHypotheses: [], currentBelief: "тестовое состояние" } }),
+				...(job.isLastWindow ? {} : { digest: { goal: "test goal", openHypotheses: [], currentBelief: "test state" } }),
 			};
 			const ok = await submitJob(stateDir, job.jobId, JSON.stringify(body));
 			expect(ok.ok).toBe(true);
@@ -152,13 +152,13 @@ describe("work server", () => {
 
 	function pass2Body(): string {
 		return JSON.stringify({
-			arcs: [{ kind: "H", status: "confirmed", text: "гипотеза из фикстуры подтвердилась", fromLine: 1, toLine: 5, subject: "demo" }],
-			verdict: { status: "success", why: "тесты починены" },
+			arcs: [{ kind: "H", status: "confirmed", text: "the fixture hypothesis was confirmed", fromLine: 1, toLine: 5, subject: "demo" }],
+			verdict: { status: "success", why: "the tests were fixed" },
 			items: [
 				{
-					title: "Сначала читать структуру",
-					description: "Прежде чем чинить, осмотреть файлы",
-					content: "Агент начал с чтения структуры проекта и не гадал.",
+					title: "Read the structure first",
+					description: "Survey the files before fixing",
+					content: "The agent started by reading the project structure instead of guessing.",
 					polarity: "strategy",
 					subject: ["demo"],
 					evidence: [{ line: 3 }],
@@ -208,7 +208,7 @@ describe("work server", () => {
 		}
 		const bankRaw = await readFile(join(stateDir, "bank", "INDEX.md"), "utf8").catch(() => "");
 		// two pass-2 submits with identical items dedup to one bank entry
-		expect(bankRaw).toContain("Сначала читать структуру");
+		expect(bankRaw).toContain("Read the structure first");
 		const metrics = await readFile(join(stateDir, "metrics.jsonl"), "utf8");
 		expect(metrics.split("\n").filter((l) => l.trim().length > 0)).toHaveLength(2);
 	});

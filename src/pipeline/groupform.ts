@@ -1,5 +1,5 @@
 /**
- * Grouped compressed form: the "настоящая" reduced-scale replica of the
+ * Grouped compressed form: the "true" reduced-scale replica of the
  * session that pass-2 (SMART) reads and the final trace shows.
  *
  * Rendering rules (fable idea 8): identical consecutive calls collapse to ×N
@@ -46,12 +46,12 @@ export function renderGroupedTurn(input: TurnFormInput, level: DegradeLevel = 0)
 	const { turn, anchors, entries, block, disputes } = input;
 	const lines: string[] = [];
 	lines.push(`#### b${turn.index} · @L${turn.fromLine}–L${turn.toLine}${turn.toolNames.length > 0 ? ` · ${turn.toolNames.join(",")}` : ""}`);
-	if (turn.interrupted) lines.push(`(ход оборван: результат последнего вызова не зафиксирован в логе)`);
+	if (turn.interrupted) lines.push(`(turn cut off: the last call's result was not recorded in the log)`);
 
 	// honesty: thinking exists in the log but was not distilled
 	const thinkingCount = turn.entries.filter((e) => e.kind === "assistant_thinking" && e.text.trim().length > 0).length;
 	if (block.thoughts.length === 0 && thinkingCount > 0) {
-		lines.push(`💭 — (thinking не дистиллирован: ${thinkingCount} блоков, см. @L${turn.fromLine}–L${turn.toLine})`);
+		lines.push(`💭 — (thinking not distilled: ${thinkingCount} blocks, see @L${turn.fromLine}–L${turn.toLine})`);
 	}
 
 	// thought lines first (the motive precedes the action)

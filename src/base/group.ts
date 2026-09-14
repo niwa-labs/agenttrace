@@ -393,15 +393,15 @@ function deterministicSummary(
 	const edits = get("edit");
 	const execs = get("execute");
 	const other = calls - read - edits - execs - get("web") - get("agent") - get("mcp");
-	if (read > 0) parts.push(`чтение/поиск ×${read}`);
-	if (edits > 0) parts.push(`правки ×${edits}`);
-	if (execs > 0) parts.push(`запуски ×${execs}`);
-	if (get("web") > 0) parts.push(`веб ×${get("web")}`);
-	if (get("agent") > 0) parts.push(`сабагенты ×${get("agent")}`);
+	if (read > 0) parts.push(`read/search ×${read}`);
+	if (edits > 0) parts.push(`edits ×${edits}`);
+	if (execs > 0) parts.push(`runs ×${execs}`);
+	if (get("web") > 0) parts.push(`web ×${get("web")}`);
+	if (get("agent") > 0) parts.push(`subagents ×${get("agent")}`);
 	if (get("mcp") > 0) parts.push(`mcp ×${get("mcp")}`);
-	if (other > 0) parts.push(`прочее ×${other}`);
-	let summary = parts.length > 0 ? parts.join(", ") : "без вызовов инструментов";
-	if (errs > 0) summary += `; ошибок: ${errs}`;
+	if (other > 0) parts.push(`other ×${other}`);
+	let summary = parts.length > 0 ? parts.join(", ") : "no tool calls";
+	if (errs > 0) summary += `; errors: ${errs}`;
 	return summary;
 }
 

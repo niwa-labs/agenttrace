@@ -23,9 +23,9 @@ import type { AnyModel, Models } from "../agent/models.js";
 const MAX_READ_BYTES = 16 * 1024;
 
 const ReadLogParams = Type.Object({
-	file: Type.String({ description: "Абсолютный путь к исходному JSONL-логу (из шапки)" }),
-	line: Type.Integer({ description: "1-based строка из указателя @L", minimum: 1 }),
-	count: Type.Integer({ description: "Сколько строк прочитать (1–40)", minimum: 1, maximum: 40, default: 1 }),
+	file: Type.String({ description: "Absolute path to the original JSONL log (from the header)" }),
+	line: Type.Integer({ description: "1-based line from an @L pointer", minimum: 1 }),
+	count: Type.Integer({ description: "How many lines to read (1–40)", minimum: 1, maximum: 40, default: 1 }),
 });
 
 function readLogTool(allowedFiles: Set<string>, counter: { calls: number; budget: number }): AgentTool<typeof ReadLogParams, undefined> {
@@ -33,11 +33,11 @@ function readLogTool(allowedFiles: Set<string>, counter: { calls: number; budget
 	return {
 		name: "read_log",
 		label: "Read log lines",
-		description: "Прочитать точные строки исходного лога для разыменования @L. Только файлы из шапки.",
+		description: "Read exact lines of the original log to dereference @L pointers. Only files listed in the header.",
 		parameters: ReadLogParams,
 		execute: async (_id, params) => {
 			if (counter.calls >= counter.budget) {
-				throw new Error(`read_log budget exhausted (${counter.budget}) — продолжай по данным формы, помечай непроверенное как open`);
+				throw new Error(`read_log budget exhausted (${counter.budget}) — continue from the form data; mark anything unverified as open`);
 			}
 			counter.calls++;
 			const file = resolve(params.file);
@@ -48,34 +48,34 @@ function readLogTool(allowedFiles: Set<string>, counter: { calls: number; budget
 			let text = picked.join("\n");
 			if (text.length > MAX_READ_BYTES) text = `${text.slice(0, MAX_READ_BYTES)}…[truncated]`;
 			return {
-				content: [{ type: "text", text: text.length === 0 ? `(пусто; в файле ${lines.length} строк)` : text }],
+				content: [{ type: "text", text: text.length === 0 ? `(empty; the file has ${lines.length} lines)` : text }],
 				details: undefined,
 			};
 		},
 	};
 }
 
-export const PASS2_SYSTEM_PROMPT = `Ты — аналитик трейсов агентских сессий (умная модель). Цель — наблюдаемость: сохранить и объяснить КАК агент рассуждал, а не только что он сделал. Опирайся на оба исхода работы: из успешных ветвей извлекай стратегии, из неудач — guardrails; не сужай картинку до «сломалось→починили».
+export const PASS2_SYSTEM_PROMPT = `You are an analyst of coding-agent session traces (a smart model). The goal is observability: preserve and explain HOW the agent reasoned, not only what it did. Rely on both kinds of work outcomes: extract strategies from successful branches and guardrails from failures; do not narrow the picture down to "it broke→it got fixed".
 
-Тебе дают сжатую форму сессии: строки 💭 (мысли, с типом и якорем @L), строка ⚠ (расхождение заявления с машинным фактом), однострочники вызовов, строки → (микро-итоги ходов). Указатели @L указывают на строки исходного JSONL (файл — в шапке). Есть инструмент read_log для разыменования.
+You are given the compressed form of a session: 💭 lines (thoughts, with a type and an @L anchor), ⚠ lines (a claim contradicting a machine fact), one-liners of tool calls, → lines (per-turn micro-outcomes). @L pointers reference lines of the original JSONL (the file is in the header). There is a read_log tool for dereferencing.
 
-Задачи:
-1. ДУГИ рассуждения: где гипотеза (H) подтвердилась/опровергнута (укажи строку исхода), где альтернатива (ALT) ретроспективно была права/нет, где ошибка рассуждения (ERR-R) была замечена (noticed) или не замечена (never).
-2. Каждая дуга несёт subject (файл/модуль/понятие) — из дуг строится машинный индекс для накопительного анализа поперёк трейсов.
-3. VERDICT: одна строка по фактам (сверяйся с ⚠/запечатанными данными в форме).
-4. ITEMS: ≤3 штук {title, description, content(rationale-цепочка «гипотеза → проверка → вывод/смена курса»), polarity: strategy|guardrail, subject[], evidence[{line}]} — переносимые уроки для банка знаний.
+Tasks:
+1. REASONING ARCS: where a hypothesis (H) was confirmed/refuted (give the line of the outcome), where an alternative (ALT) was retrospectively right/wrong, where a reasoning error (ERR-R) was noticed or never noticed.
+2. Each arc carries a subject (file/module/concept) — the arcs build a machine index for cumulative analysis across traces.
+3. VERDICT: one line based on facts (cross-check against the ⚠ lines and the sealed data in the form).
+4. ITEMS: at most 3 of {title, description, content(rationale chain "hypothesis → check → conclusion/course change"), polarity: strategy|guardrail, subject[], evidence[{line}]} — portable lessons for the knowledge bank.
 
-Правила: факты, не интерпретация; непроверенное — status=open или пометка hypothesis; утверждение о мотиве агента — только если видно в 💭 или подтверждено read_log; без самооценок; по-русски.
-ЗАПРЕЩЕНО придумывать исходы вызовов: если в форме у вызова нет [RESULT] или стоит пометка «результат не зафиксирован» — исход НЕИЗВЕСТЕН; «неизвестно» ≠ «пусто» ≠ «провалено». По такому вызову нельзя ставить дуге статус confirmed/refuted — только open.
-Статусы дуг опирай на текст формы; утверждения «найдено/не найдено» — только с опорой на [RESULT]-текст или read_log; если урезанный результат (⟨урезано…⟩) важен для вывода — сначала read_log @L.
-Дуги строились ТОЛЬКО по 💭-строкам и [ASSISTANT]-наррации формы: не приписывай ходам без 💭 никаких мыслей и намерений; не выдумывай результаты вызовов, которых нет в форме («пусто» ≠ «не найдено» ≠ «провалено»).
-Не меняй kind уже классифицированной в форме мысли (💭 ? — оставайся ? или ?.); subject в дуге — файл/модуль/понятие.
-verdict.why не приписывай агенту уверенность/неуверенность — передавай его фактическую позицию из [ASSISTANT]-строк; если 💭 (inferred) противоречит [ASSISTANT] того же хода — статус refuted и note о противоречии.
+Rules: facts, not interpretation; anything unverified gets status=open or a hypothesis mark; a claim about the agent's motive only if it is visible in 💭 or confirmed via read_log; no self-assessments; write in English.
+It is FORBIDDEN to invent call outcomes: if a call in the form has no [RESULT] or carries the mark "result not recorded" — the outcome is UNKNOWN; "unknown" ≠ "empty" ≠ "failed". For such a call an arc must not get status confirmed/refuted — only open.
+Base arc statuses on the form's text; "found/not found" claims only with backing from [RESULT] text or read_log; if a truncated result (⟨truncated…⟩) matters for the conclusion — read_log @L first.
+Arcs were built ONLY from the form's 💭 lines and [ASSISTANT] narration: do not attribute any thoughts or intentions to turns without 💭; do not invent call results that are absent from the form ("empty" ≠ "not found" ≠ "failed").
+Do not change the kind of a thought already classified in the form (💭 ? — stay with ? or ?.); an arc's subject is a file/module/concept.
+In verdict.why do not attribute confidence or lack of confidence to the agent — convey its actual position from the [ASSISTANT] lines; if a 💭 (inferred) contradicts the [ASSISTANT] of the same turn — status refuted plus a note about the contradiction.
 
-Формат ответа — один JSON-объект:
+The answer format is a single JSON object:
 {
-  "arcs": [{"kind": "H|ALT|PIVOT|INSIGHT|ERR-R", "text": "...", "status": "confirmed|refuted|open|noticed|never", "fromLine": <int>, "toLine": <int>?, "subject": "<файл/модуль/понятие>"}],
-  "verdict": {"status": "success|partial|failure", "why": "<одно предложение>"},
+  "arcs": [{"kind": "H|ALT|PIVOT|INSIGHT|ERR-R", "text": "...", "status": "confirmed|refuted|open|noticed|never", "fromLine": <int>, "toLine": <int>?, "subject": "<file/module/concept>"}],
+  "verdict": {"status": "success|partial|failure", "why": "<one sentence>"},
   "items": [{"title": "≤80", "description": "≤200", "content": "≤800", "polarity": "strategy|guardrail", "subject": ["..."], "evidence": [{"line": <int>}]}]
 }`;
 
@@ -113,16 +113,16 @@ export async function runPass2(
 	});
 
 	const header = [
-		"# Сессия для анализа",
+		"# Session for analysis",
 		`sessionId: ${sessionId}`,
-		"Исходные логи (для read_log по @L):",
+		"Original logs (for read_log via @L):",
 		...[...deps.allowedLogFiles].map((f) => `- ${f}`),
 		"",
-		"## Сжатая форма",
+		"## Compressed form",
 		"",
 		groupedForm,
 		"",
-		"## Запечатанные машинные факты (им верь, их не оспаривай)",
+		"## Sealed machine facts (believe them, do not dispute them)",
 		"",
 		factsFooter,
 	].join("\n");
@@ -133,8 +133,8 @@ export async function runPass2(
 	for (let attempt = 0; attempt <= 2; attempt++) {
 		const prompt =
 			attempt === 0
-				? `${header}\n\nВыполни анализ и выдай JSON.`
-				: `Валидатор отклонил ответ. Верни исправленный JSON целиком.`;
+				? `${header}\n\nPerform the analysis and output the JSON.`
+				: `The validator rejected the answer. Return the corrected JSON in full.`;
 		await agent.prompt(prompt);
 		await agent.waitForIdle();
 		const text = lastText(agent);
@@ -148,7 +148,7 @@ export async function runPass2(
 		lastError = errors.join("; ");
 		if (attempt === 1) {
 			await agent.prompt(
-				`Подсказка: минимально корректный ответ — {"arcs": [], "reasoningIndex": [], "verdict": {"status": "partial", "why": "..."}, "items": []}`,
+				`Hint: a minimally valid answer is {"arcs": [], "reasoningIndex": [], "verdict": {"status": "partial", "why": "..."}, "items": []}`,
 			);
 			await agent.waitForIdle();
 		}

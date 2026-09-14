@@ -11,10 +11,10 @@ describe("claude parser", () => {
 		expect(s.source).toBe("claude");
 		expect(s.sessionId).toBe("fix-0001");
 		expect(s.cwd).toBe("/proj/demo");
-		expect(s.title).toBe("Починить тесты");
+		expect(s.title).toBe("Fix the tests");
 		expect(s.model).toBe("claude-test-1");
 		expect(s.gitBranch).toBe("main");
-		expect(s.firstPrompt).toBe("почини тесты в apps/dist");
+		expect(s.firstPrompt).toBe("fix the tests in apps/dist");
 		expect(s.logLines).toBe(18);
 		expect(s.entries.length).toBeGreaterThan(0);
 	});
@@ -59,7 +59,7 @@ describe("claude parser", () => {
 			(e): e is TextEntry & { kind: "user_text" } => e.kind === "user_text",
 		);
 		expect(prompts).toHaveLength(1);
-		expect(prompts[0]?.text).toBe("почини тесты в apps/dist");
+		expect(prompts[0]?.text).toBe("fix the tests in apps/dist");
 		const note = s.entries.find(
 			(e) => e.kind === "system_note" && e.subtype === "compact_boundary",
 		);

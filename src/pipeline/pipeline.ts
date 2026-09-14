@@ -242,8 +242,8 @@ async function refineSession(session: NormalizedSession, ctx: SessionCtx): Promi
 					anchor: { fromLine: turn.fromLine, toLine: turn.toLine },
 					action:
 						turn.kind === "user"
-							? `Пользователь: ${turn.entries[0]?.kind === "user_text" ? turn.entries[0].text.slice(0, 1200) : "..."}`
-							: `Ход (${turn.toolNames.join(",") || "без вызовов"}) — не сжат моделью [det]`,
+							? `User: ${turn.entries[0]?.kind === "user_text" ? turn.entries[0].text.slice(0, 1200) : "..."}`
+							: `Turn (${turn.toolNames.join(",") || "no calls"}) — not compressed by the model [det]`,
 					thoughts: [],
 				},
 				disputes: [],
@@ -263,7 +263,7 @@ async function refineSession(session: NormalizedSession, ctx: SessionCtx): Promi
 			thoughtsByKind.set(t.kind, (thoughtsByKind.get(t.kind) ?? 0) + 1);
 		}
 		if (block.action.trim().length < 8) {
-			console.warn(`warn: ${session.sessionId.slice(0, 8)} b${turn.index}: подозрительно короткий action от FAST — "${block.action}"`);
+		console.warn(`warn: ${session.sessionId.slice(0, 8)} b${turn.index}: suspiciously short action from FAST — "${block.action}"`);
 		}
 		turnInputs.push({ turn, anchors, entries: turn.entries, block, disputes: gate.disputes });
 		factsFooter += `b${turn.index} @L${turn.fromLine}–L${turn.toLine}: ${renderFacts(sealed)}${gate.disputes.length > 0 ? " [DISPUTED]" : ""}\n`;
@@ -299,7 +299,7 @@ async function refineSession(session: NormalizedSession, ctx: SessionCtx): Promi
 			(a) => Number.isFinite(a.fromLine) && a.fromLine >= 1 && a.fromLine <= session.logLines,
 		);
 		const dropped = before - pass2.output.arcs.length;
-		if (dropped > 0) console.warn(`warn: ${session.sessionId.slice(0, 8)}: ${dropped} дуг отброшено (якорь вне лога)`);
+		if (dropped > 0) console.warn(`warn: ${session.sessionId.slice(0, 8)}: ${dropped} arcs dropped (anchor outside the log)`);
 	}
 
 	// bank items are merged after all workers finish (no races)

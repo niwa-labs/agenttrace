@@ -27,34 +27,34 @@ export const PASS1_SCHEMA_VERSION = 3;
 
 
 
-export const PASS1_SYSTEM_PROMPT = `Ты — сжиматель логов агентских сессий (быстрая модель). Тебе последовательно дают ходы (TURN) исходной сессии: thinking целиком, наррацию, вызовы инструментов с урезанными результатами.
+export const PASS1_SYSTEM_PROMPT = `You are a coding-agent session log compressor (a fast model). You are given the turns (TURN) of the original session one by one: thinking in full, the narration, tool calls with truncated results.
 
-На каждый TURN ответь ОДНИМ JSON-объектом, без текста вокруг:
+For each TURN reply with a SINGLE JSON object, no text around it:
 {
   "anchor": {"fromLine": <int>, "toLine": <int>},
-  "action": "<сжатое описание действий хода, ≤240 символов>",
-  "thoughts": [  // 0–3 события рассуждения хода
+  "action": "<compressed description of the turn's actions, ≤240 chars>",
+  "thoughts": [  // 0–3 reasoning events of the turn
     {"kind": "H"|"ALT"|"?"|"PIVOT"|"INSIGHT"|"ERR-R",
      "source": "thinking"|"narration"|"inferred",
-     "text": "<суть мысли своими словами, ≤320 символов>",
-     "q": "<q-id из [q...] метки, обязателен для thinking|narration>"}
+     "text": "<the gist of the thought in your own words, ≤320 chars>",
+     "q": "<q-id from the [q...] label, required for thinking|narration>"}
   ],
-  "factsClaimed": {"checks": {"run": <int>, "failed": <int>}, "exitCode": <int>}  // опционально
+  "factsClaimed": {"checks": {"run": <int>, "failed": <int>}, "exitCode": <int>}  // optional
 }
 
-Правила:
-- СКЛЕЙКА: идущие подряд незначимые ходы (рутинные чтения, проверки статусов, повторы без новой информации, ходы без thinking) разрешено объединять в ОДИН ответ: anchor покрывает их точно (fromLine первого, toLine последнего), turnIndex — первый из них, action — общее сжатое описание прогона. Не склеивай ходы с thinking, ошибками, решениями.
-- Ходы оператора ([USER]): абстрагируй намерение в третьем лице, НЕ цитируй дословно, не вставляй имена флагов, путей и другие точные значения.
-- anchor — фактические строки TURN'а (они указаны в заголовке).
-- thoughts ОБЯЗАТЕЛЬНО непустой, если в ходе есть блоки [THINKING] — по одному событию на самую существенную мысль каждого блока (source="thinking", q — id блока). Максимум 3, выбирай самые важные: развороты, открытия, гипотезы, сомнения, причины выбора.
-- Если thinking нет, но [ASSISTANT]-наррация содержит обоснование/вывод — thought с source="narration". Только если ни мыслей, ни обоснований нет — thoughts: [].
-- Мысль формулируй как НАМЕРЕНИЕ/гипотезу в настоящем времени («ищу X», «предполагаю Y»), не как свершившийся факт, — если только это не вывод.
-- Не добавляй в мысль детали из промпта или результатов вызова — только то, что написано в самом [THINKING].
-- source=inferred разрешён только с kind H или ? (когда рассуждение не зафиксировано, а ты видишь намерение по действиям); inferred не должен противоречить [ASSISTANT]-тексту хода.
-- factsClaimed — только то, что реально видно в [RESULT] этого хода. Не выдумывай результаты: если у вызова нет [RESULT] — результата не существует.
-- Текст с пометкой [delegation:*] — входящее сообщение ДРУГОГО агента/потока: это запрос или отчёт, адресованный агенту, а не его собственная работа. Не приписывай её себе в action/thought.
-- Отвечай на языке исходного запроса пользователя (русский текст запроса → русский ответ; английский → английский). Если язык определить нельзя — по-русски.
-- Никакого текста кроме JSON.`;
+Rules:
+- MERGING: consecutive insignificant turns (routine reads, status checks, repeats with no new information, turns without thinking) may be merged into ONE answer: the anchor covers them exactly (fromLine of the first, toLine of the last), turnIndex is the first of them, action is a single compressed description of the run. Do not merge turns that contain thinking, errors, or decisions.
+- Operator turns ([USER]): abstract the intent in the third person, do NOT quote verbatim, do not include flag names, paths, or other exact values.
+- anchor is the actual lines of the TURN (given in its header).
+- thoughts MUST be non-empty when the turn has [THINKING] blocks — one event per the most essential thought of each block (source="thinking", q is the block id). At most 3; pick the most important ones: pivots, discoveries, hypotheses, doubts, reasons for choices.
+- If there is no thinking but the [ASSISTANT] narration contains reasoning/conclusions — a thought with source="narration". Only when there are neither thoughts nor conclusions — thoughts: [].
+- Phrase a thought as an INTENT/hypothesis in the present tense ("looking for X", "assuming Y"), not as an accomplished fact — unless it is a conclusion.
+- Do not add details from the prompt or from call results to a thought — only what is written in the [THINKING] itself.
+- source=inferred is allowed only with kind H or ? (when the reasoning is not recorded but you can see the intent from the actions); inferred must not contradict the turn's [ASSISTANT] text.
+- factsClaimed — only what is actually visible in this turn's [RESULT]. Do not invent results: if a call has no [RESULT], the result does not exist.
+- Text marked [delegation:*] is an incoming message from ANOTHER agent/thread: a request or a report addressed to the agent, not its own work. Do not attribute it to this agent in action/thought.
+- Reply in the language of the user's original request (a Russian request → a Russian answer; an English request → an English answer). If the language cannot be determined — reply in English.
+- No text other than the JSON.`;
 
 export interface Pass1TurnResult {
 	turnIndex: number;
@@ -114,7 +114,7 @@ export async function runPass1Window(
 
 	if (previousDigest !== undefined) {
 		await agent.prompt(
-			`Состояние сжатия предыдущего окна (для непрерывности, не отвечай на него):\n${JSON.stringify(previousDigest)}`,
+			`Compressed state of the previous window (for continuity; do not reply to it):\n${JSON.stringify(previousDigest)}`,
 		);
 		await agent.waitForIdle();
 	}
@@ -123,7 +123,7 @@ export async function runPass1Window(
 		const anchors: TurnAnchors = anchorTurn(turn);
 		const rendered = renderTurn(turn, anchors, renderOptionsForTurn(turn));
 		const ctx = { fromLine: turn.fromLine, toLine: turn.toLine, quoteIds: new Set(anchors.byQ.keys()) };
-		const promptText = `${rendered}\n\nОтветь JSON по схеме для TURN b${turn.index}.`;
+		const promptText = `${rendered}\n\nReply with JSON per the schema for TURN b${turn.index}.`;
 
 		let retries = 0;
 		let fallback = false;
@@ -131,14 +131,14 @@ export async function runPass1Window(
 		let lastValidatorError = "";
 		const thinkingQs = anchors.quotes.filter((q) => q.source === "thinking").map((q) => q.q);
 		for (let attempt = 0; attempt <= 3; attempt++) {
-			const minimal = `Верни МИНИМАЛЬНЫЙ корректный JSON для TURN b${turn.index}: anchor (fromLine=${turn.fromLine}, toLine=${turn.toLine}), action, thoughts: [].`;
+			const minimal = `Return a MINIMAL valid JSON for TURN b${turn.index}: anchor (fromLine=${turn.fromLine}, toLine=${turn.toLine}), action, thoughts: [].`;
 			const prompt =
 				attempt === 0
 					? promptText
 					: attempt === 1
-						? `${lastValidatorError}\nВерни исправленный JSON для TURN b${turn.index}.`
+						? `${lastValidatorError}\nReturn the corrected JSON for TURN b${turn.index}.`
 						: attempt === 2 && thinkingQs.length > 0
-							? `thoughts не может быть пустым: в ходе есть [THINKING] (${thinkingQs.join(", ")}). Извлеки главную мысль — источник="thinking", q=<id>, text=суть своими словами.`
+							? `thoughts must not be empty: the turn has [THINKING] (${thinkingQs.join(", ")}). Extract the main idea — source="thinking", q=<id>, text=the gist in your own words.`
 							: minimal;
 			await agent.prompt(prompt);
 			await agent.waitForIdle();
@@ -168,14 +168,14 @@ export async function runPass1Window(
 					(candidate.factsClaimed?.exitCode !== undefined && sealed.lastExitCode !== undefined && candidate.factsClaimed.exitCode !== sealed.lastExitCode);
 				if (disputed && attempt < 3) {
 					retries++;
-					lastValidatorError = "factsClaimed противоречит машинным фактам этого хода. Перечитай [RESULT]-строки и исправь factsClaimed (значения не сообщаются — смотри сам).";
+					lastValidatorError = "factsClaimed contradicts the machine facts of this turn. Re-read the [RESULT] lines and fix factsClaimed (the values are not disclosed — check them yourself).";
 					continue;
 				}
 				block = candidate;
 				break;
 			}
 			retries++;
-			lastValidatorError = `Валидатор отклонил ответ:\n${errors.map((e) => `- ${e}`).join("\n")}`;
+			lastValidatorError = `The validator rejected the answer:\n${errors.map((e) => `- ${e}`).join("\n")}`;
 		}
 		if (block === undefined) {
 			// last resort: a FRESH agent session (only this turn, clean context).
@@ -242,7 +242,7 @@ export async function runPass1Window(
 		const errors = parsed === undefined ? ["no JSON in digest reply"] : validatePass1Digest(parsed);
 		// sanity gate: a digest runaway (comparable to the window it summarizes)
 		// defeats the purpose — fall back to the deterministic skeleton
-		if (errors.length === 0 && parsed !== undefined && text.length > 4000) {
+		if (errors.length === 0 && parsed !== undefined && text !== undefined && text.length > 4000) {
 			digest = detDigest(window);
 		} else if (errors.length === 0 && parsed !== undefined) {
 			digest = asPass1Digest(parsed);
@@ -254,24 +254,24 @@ export async function runPass1Window(
 	return { windowIndex: window.index, turns: results, ...(digest !== undefined ? { digest } : {}) };
 }
 
-const DIGEST_PROMPT = `Окно сжато. Выдай JSON-дайджест окна для следующего окна (тот же протокол: один JSON-объект):
+const DIGEST_PROMPT = `The window is compressed. Produce a JSON digest of this window for the next window (same protocol: a single JSON object):
 {
-  "goal": "<что делается, ≤200 символов>",
-  "openHypotheses": [{"text": "<нерешённая гипотеза>", "q": "<q-id, если есть>"}],
-  "currentBelief": "<текущая картина мира, ≤300 символов>",
-  "naming": ["<как названы ключевые сущности>"],
+  "goal": "<what is being done, ≤200 chars>",
+  "openHypotheses": [{"text": "<unresolved hypothesis>", "q": "<q-id, if any>"}],
+  "currentBelief": "<current picture of the world, ≤300 chars>",
+  "naming": ["<how the key entities are named>"],
   "checkpoint": {
-    "intent": "<запрос/намерение оператора, ≤400 символов или пусто>",
-    "concepts": "<ключевые технические концепции окна, ≤400 или пусто>",
-    "files": "<затронутые файлы/пути через запятую, ≤400 или пусто>",
-    "errors": "<ошибки и как решены, ≤400 или пусто>",
-    "pending": "<незавершённые задачи, ≤400 или пусто>",
-    "current": "<что происходило прямо в этом окне, ≤400 или пусто>",
-    "next": "<очевидный следующий шаг, ≤400 или пусто>",
-    "critical": "<критический контекст без которого продолжение сломается, ≤400 или пусто>"
+    "intent": "<the operator's request/intent, ≤400 chars or empty>",
+    "concepts": "<key technical concepts of the window, ≤400 or empty>",
+    "files": "<affected files/paths, comma-separated, ≤400 or empty>",
+    "errors": "<errors and how they were resolved, ≤400 or empty>",
+    "pending": "<unfinished tasks, ≤400 or empty>",
+    "current": "<what was happening right in this window, ≤400 or empty>",
+    "next": "<the obvious next step, ≤400 or empty>",
+    "critical": "<critical context without which continuation would break, ≤400 or empty>"
   }
 }
-Правила checkpoint: консолидируй с предыдущим digest — если в нём уже был checkpoint, ИСТИННОЕ оставь, УСТАРЕВШЕЕ выбрось, новое добавь (не копируй дословно); пустая секция = пустая строка. Весь digest должен быть заметно короче окна.`;
+Checkpoint rules: consolidate with the previous digest — if it already had a checkpoint, keep what is STILL TRUE, drop what is OUTDATED, add what is new (do not copy verbatim); an empty section = an empty string. The whole digest must be noticeably shorter than the window.`;
 
 function countUsage(usage: { requests: number; inputTokens: number; outputTokens: number }, agent: Agent): void {
 	for (let i = agent.state.messages.length - 1; i >= 0; i--) {
@@ -306,16 +306,16 @@ function lastAssistantText(agent: Agent): string | undefined {
 }
 
 function detFallbackAction(turn: { toolNames: string[]; entries: { kind: string }[]; interrupted: boolean }): string {
-	const tools = turn.toolNames.length > 0 ? turn.toolNames.join(",") : "без вызовов";
-	const kind = turn.entries.some((e) => e.kind === "tool_call") ? "ход" : "реплика";
-	return `${kind} (${tools})${turn.interrupted ? " — прервано" : ""} [fallback: не сжато моделью]`;
+	const tools = turn.toolNames.length > 0 ? turn.toolNames.join(",") : "no calls";
+	const kind = turn.entries.some((e) => e.kind === "tool_call") ? "turn" : "message";
+	return `${kind} (${tools})${turn.interrupted ? " — interrupted" : ""} [fallback: not compressed by the model]`;
 }
 
 function detDigest(window: Window): Pass1Digest {
 	return {
-		goal: `(окно ${window.index}: модель не выдала digest)`,
+		goal: `(window ${window.index}: the model produced no digest)`,
 		openHypotheses: [],
-		currentBelief: "(неизвестно — детерминированный digest)",
+		currentBelief: "(unknown — deterministic digest)",
 		checkpoint: {
 			intent: "",
 			concepts: "",

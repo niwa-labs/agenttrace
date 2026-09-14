@@ -238,30 +238,30 @@ async function readStdin(): Promise<string> {
 }
 
 function printWorkUsage(): void {
-	console.error(`raiseki work — агентский режим: скрипт раздаёт данные слоями, агент сжимает и сдаёт результат
+	console.error(`raiseki work — agent mode: the script hands out data in layers, the agent compresses it and submits the result
 
-  raiseki work init --state <dir>     собрать состояние: cursor-экспорт, реестр сессий, det-скелеты
-      --claude-root <dir> ...    корни логов claude (по умолчанию ~/.claude-my/projects, ~/.claude/projects)
-      --codex-root <dir> ...     корни логов codex (по умолчанию выключены)
-      --pi-root <dir> ...        корни логов pi (~/.pi/agent/sessions)
-      --qwen-root <dir> ...      корень логов qwen (~/.qwen/projects)
-      --kimi-code-sessions <dir> ...  корни логов kimi-code (~/.kimi-code/sessions)
-      --kimi-sessions <dir> ...  корни логов kimi CLI (~/.kimi/sessions)
-      --minimax-root <dir> ...   корень логов minimax/mcode (~/.minimax/v2/sessions)
-      --no-cursor                не импортировать Cursor (IDE + agent CLI)
-      --only <substr>            оставить в реестре только логи с подстрокой
-  raiseki work status --state <dir>                    счётчики по слоям/проектам
+  raiseki work init --state <dir>     build state: cursor export, session registry, det skeletons
+      --claude-root <dir> ...    claude log roots (default ~/.claude-my/projects, ~/.claude/projects)
+      --codex-root <dir> ...     codex log roots (disabled by default)
+      --pi-root <dir> ...        pi log roots (~/.pi/agent/sessions)
+      --qwen-root <dir> ...      qwen log root (~/.qwen/projects)
+      --kimi-code-sessions <dir> ...  kimi-code log roots (~/.kimi-code/sessions)
+      --kimi-sessions <dir> ...  kimi CLI log roots (~/.kimi/sessions)
+      --minimax-root <dir> ...   minimax/mcode log root (~/.minimax/v2/sessions)
+      --no-cursor                do not import Cursor (IDE + agent CLI)
+      --only <substr>            keep only logs containing the substring in the registry
+  raiseki work status --state <dir>                    counters per layer/project
   raiseki work claim --state <dir> --layer pass1 --worker <name>
-      взять одну пачку (окно ~40k tok); pass2 откроется, когда весь pass1 готов
+      take one batch (a ~40k tok window); pass2 opens once all of pass1 is done
   raiseki work submit --state <dir> <jobId> < result.json
-      сдать результат (JSON на stdin); ошибки валидации → ok:false, чини и сдавай снова
-  raiseki work release --state <dir> <jobId>           отказаться от пачки
+      submit the result (JSON on stdin); validation errors → ok:false, fix and resubmit
+  raiseki work release --state <dir> <jobId>           give up the batch
   raiseki work layer --state <dir> pass1 [--cursor <tok>] [--limit <n>]
-      постраничный обзор пачек слоя
-  raiseki work finalize --state <dir>                  трейсы по проектам + банк + метрики
+      paged overview of the layer's batches
+  raiseki work finalize --state <dir>                  traces per project + bank + metrics
   raiseki work reindex --state <dir> [--window-tokens N] [--turn-tokens N]
-      перестроить окна (меньшие пачки); уже сжатые ходы зачитываются по сайдкару
+      rebuild the windows (smaller batches); already compressed turns are picked up from the sidecar
 
-Все ответы — один JSON-объект на stdout.
+All replies are a single JSON object on stdout.
 `);
 }

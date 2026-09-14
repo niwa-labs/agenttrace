@@ -102,13 +102,13 @@ describe("distill + render", () => {
 		expect((stats["compressionRatio"] as number)).toBeGreaterThan(1);
 
 		// body sections
-		expect(md).toContain("# Починить тесты");
+		expect(md).toContain("# Fix the tests");
 		expect(md).toContain("## Verdict");
-		expect(md).toContain("## Задача");
-		expect(md).toContain("почини тесты в apps/dist");
-		expect(md).toContain("## Таймлайн");
+		expect(md).toContain("## Task");
+		expect(md).toContain("fix the tests in apps/dist");
+		expect(md).toContain("## Timeline");
 		expect(md).toContain("@L");
-		expect(md).toContain("## Сабагенты");
+		expect(md).toContain("## Subagents");
 		expect(md).toContain("repair");
 	});
 
@@ -119,7 +119,7 @@ describe("distill + render", () => {
 		expect(traces).toHaveLength(1);
 		expect(traces[0]?.meta.stats.subagentRuns).toBe(1);
 		const md = renderTraceMd(traces[0] as NonNullable<typeof traces[0]>);
-		expect(md).toContain("codex-сабагент");
+		expect(md).toContain("codex subagent");
 	});
 
 	it("emits chain kind with reasons for merged sessions", async () => {
@@ -134,7 +134,7 @@ describe("distill + render", () => {
 		expect(traces).toHaveLength(1);
 		expect(traces[0]?.meta.kind).toBe("chain");
 		const md = renderTraceMd(traces[0] as NonNullable<typeof traces[0]>);
-		expect(md).toContain("сессия 2");
+		expect(md).toContain("session 2");
 	});
 
 	it("yaml roundtrip keeps verdict structure", async () => {

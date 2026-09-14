@@ -13,7 +13,7 @@ export function traceFileName(sessions: { sessionId: string; startedAt: string }
 export function slugify(text: string, cap = 40): string {
 	const slug = text
 		.toLowerCase()
-		.replace(/[^a-zа-я0-9]+/gi, "-")
+		.replace(/[^a-z0-9]+/gi, "-")
 		.replace(/^-+|-+$/g, "")
 		.slice(0, cap)
 		.replace(/-+$/g, "");

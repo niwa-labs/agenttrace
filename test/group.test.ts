@@ -18,7 +18,7 @@ describe("grouping", () => {
 		expect(g.blocks[0]?.label).toBe("run");
 		expect(g.blocks[g.blocks.length - 1]?.label).toBe("outcome");
 		expect(g.taskPrompts).toHaveLength(1);
-		expect(g.taskPrompts[0]?.text).toBe("почини тесты в apps/dist");
+		expect(g.taskPrompts[0]?.text).toBe("fix the tests in apps/dist");
 		expect(g.counts.toolCalls).toBe(5);
 		expect(g.counts.toolErrors).toBe(1);
 		expect(g.counts.repairCycles).toBe(1);

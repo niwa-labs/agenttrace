@@ -34,14 +34,14 @@ export function renderTurn(turn: Turn, anchors: TurnAnchors, opts: TurnRenderOpt
 	const lines: string[] = [];
 	lines.push(`TURN b${turn.index} [lines ${turn.fromLine}–${turn.toLine}]`);
 	if (turn.toolNames.length > 0) lines.push(`tools: ${turn.toolNames.join(", ")}`);
-	if (turn.interrupted) lines.push(`ВНИМАНИЕ: лог обрывается на этом ходе — результат последнего вызова НЕ зафиксирован.`);
+	if (turn.interrupted) lines.push(`WARNING: the log breaks off at this turn — the last call's result was NOT recorded.`);
 
 	// empty thinking blocks (signature-only) mean the model thought off-record
 	const emptyThinking = turn.entries.filter(
 		(e) => e.kind === "assistant_thinking" && e.text.trim().length === 0,
 	).length;
 	if (emptyThinking > 0) {
-		lines.push(`(thinking скрыт настройками: ${emptyThinking} пустых блоков — рассуждение не зафиксировано)`);
+		lines.push(`(thinking hidden by settings: ${emptyThinking} empty blocks — reasoning not recorded)`);
 	}
 
 	const thinkingQs: string[] = [];
@@ -97,7 +97,7 @@ export function renderTurn(turn: Turn, anchors: TurnAnchors, opts: TurnRenderOpt
 
 	if (thinkingQs.length > 0) {
 		lines.push(
-			`ОБЯЗАТЕЛЬНО: в этом ходе есть thinking (${thinkingQs.join(", ")}) — поле thought обязательно, source="thinking", q — id записи с САМОЙ СУЩЕСТВЕННОЙ мыслью (разворот/открытие/гипотеза).`,
+			`MANDATORY: this turn has thinking (${thinkingQs.join(", ")}) — the thought field is required, source="thinking", q is the id of the entry with the MOST ESSENTIAL idea (pivot/discovery/hypothesis).`,
 		);
 	}
 	return lines.join("\n");

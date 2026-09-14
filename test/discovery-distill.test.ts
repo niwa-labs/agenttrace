@@ -63,8 +63,8 @@ describe("distill --only and pi source", () => {
 		await mkdir(projects, { recursive: true });
 		await mkdir(piDir, { recursive: true });
 
-		await writeFile(join(projects, "alpha.jsonl"), claudeLine("alpha-1", `${ROOT}/demo`, "задача альфа") + "\n", "utf8");
-		await writeFile(join(projects, "beta.jsonl"), claudeLine("beta-1", `${ROOT}/demo`, "задача бета") + "\n", "utf8");
+		await writeFile(join(projects, "alpha.jsonl"), claudeLine("alpha-1", `${ROOT}/demo`, "alpha task") + "\n", "utf8");
+		await writeFile(join(projects, "beta.jsonl"), claudeLine("beta-1", `${ROOT}/demo`, "beta task") + "\n", "utf8");
 		// pi session format (minimal, with cwd + one user turn)
 		await writeFile(
 			join(piDir, "2026-06-01T10-00-00_pi-demo-0001.jsonl"),
@@ -74,7 +74,7 @@ describe("distill --only and pi source", () => {
 					type: "message",
 					id: "m1",
 					timestamp: "2026-06-01T10:00:05.000Z",
-					message: { role: "user", stopReason: "end_turn", content: [{ type: "text", text: "задача паяльник pi" }] },
+					message: { role: "user", stopReason: "end_turn", content: [{ type: "text", text: "pi soldering task" }] },
 				}),
 			].join("\n") + "\n",
 			"utf8",

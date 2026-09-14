@@ -1,7 +1,7 @@
 /**
  * MD trace renderer: strict template = typed YAML frontmatter + fixed sections.
  * The document is a compressed view; every dropped payload is reachable via the
- * `@L<line>` pointers into the original session logs (see the Сессии table).
+ * `@L<line>` pointers into the original session logs (see the Sessions table).
  */
 
 import { stringify } from "yaml";
@@ -10,21 +10,21 @@ import { formatBytes } from "../core/refs.js";
 import type { CompressedTrace, TimelineBlock } from "../model/trace.js";
 
 const LABEL_TITLES: Record<string, string> = {
-	research: "исследование",
-	edit: "правки",
-	run: "запуски",
-	checks: "проверки",
-	web: "веб",
-	delegation: "делегирование",
+	research: "research",
+	edit: "edits",
+	run: "runs",
+	checks: "checks",
+	web: "web",
+	delegation: "delegation",
 	mcp: "mcp",
-	tools: "инструменты",
+	tools: "tools",
 };
 
 export function renderTraceMd(trace: CompressedTrace): string {
 	const meta = trace.meta;
 	const title =
 		trace.sessions[0]?.title ??
-		cap(trace.sessions[0]?.firstPrompt ?? "сессия", 70);
+		cap(trace.sessions[0]?.firstPrompt ?? "session", 70);
 
 	const body = renderBody(trace, title);
 
@@ -44,7 +44,7 @@ function renderBody(trace: CompressedTrace, title: string): string {
 
 	if (trace.meta.kind === "chain") {
 		out.push(
-			`> Цепочка из ${trace.meta.sessions.length} сессий, слитых в один трейс (${trace.meta.chainReasons.join(", ")}).`,
+			`> A chain of ${trace.meta.sessions.length} sessions merged into one trace (${trace.meta.chainReasons.join(", ")}).`,
 			"",
 		);
 	}
@@ -93,8 +93,8 @@ export function substituteFileRefs(text: string, fileIndex: FileIndexEntry[]): s
 }
 
 function renderSessionsTable(out: string[], trace: CompressedTrace): void {
-	out.push("## Сессии", "");
-	out.push("| # | источник | id | окно | строк | модель | ветка |");
+	out.push("## Sessions", "");
+	out.push("| # | source | id | window | lines | model | branch |");
 	out.push("|---|---|---|---|---|---|---|");
 	trace.sessions.forEach((s, i) => {
 		const win = `${hhmm(s.startedAt)}–${hhmm(s.endedAt)} (${s.startedAt.slice(0, 10)})`;
@@ -108,7 +108,7 @@ function renderSessionsTable(out: string[], trace: CompressedTrace): void {
 	});
 	out.push("");
 	out.push(
-		"> Разыменование: `@L<n>` — строка `<n>` в logFile сессии с этим номером: `sed -n '<n>p' <logFile>`. `#x1b2c3d4` — отпечаток содержимого.",
+		"> Dereferencing: `@L<n>` — line `<n>` in the logFile of the session with this number: `sed -n '<n>p' <logFile>`. `#x1b2c3d4` — content fingerprint.",
 		"",
 	);
 }
@@ -119,27 +119,27 @@ function renderVerdict(out: string[], trace: CompressedTrace): void {
 	out.push("## Verdict", "");
 	out.push(`**${v.status}** — ${v.why} _(${v.origin})_`);
 	const facts: string[] = [];
-	if (o.interrupted) facts.push("были прерванные вызовы");
-	if (o.compactions > 0) facts.push(`компакций истории: ${o.compactions}`);
-	if (trace.meta.stats.repairCycles > 0) facts.push(`repair-циклов: ${trace.meta.stats.repairCycles}`);
-	if (trace.meta.stats.subagentRuns > 0) facts.push(`сабагентов: ${trace.meta.stats.subagentRuns}`);
-	if (facts.length > 0) out.push(`- исход: ${facts.join("; ")}`);
+	if (o.interrupted) facts.push("there were interrupted calls");
+	if (o.compactions > 0) facts.push(`history compactions: ${o.compactions}`);
+	if (trace.meta.stats.repairCycles > 0) facts.push(`repair cycles: ${trace.meta.stats.repairCycles}`);
+	if (trace.meta.stats.subagentRuns > 0) facts.push(`subagents: ${trace.meta.stats.subagentRuns}`);
+	if (facts.length > 0) out.push(`- outcome: ${facts.join("; ")}`);
 	const c = trace.meta.stats.checks;
 	if (c.run > 0 || c.failed > 0) {
-		out.push(`- проверки: последний прогон ${c.run}, failed ${c.failed}`);
-		for (const name of c.failedNames.slice(0, 3)) out.push(`  - падал: \`${name}\``);
+		out.push(`- checks: last run ${c.run}, failed ${c.failed}`);
+		for (const name of c.failedNames.slice(0, 3)) out.push(`  - failing: \`${name}\``);
 	}
 	out.push("");
 }
 
 function renderTask(out: string[], trace: CompressedTrace): void {
 	if (trace.taskPrompts.length === 0) {
-		out.push("## Задача", "", "_явных пользовательских промптов не найдено_", "");
+		out.push("## Task", "", "_no explicit user prompts found_", "");
 		return;
 	}
-	out.push("## Задача", "");
+	out.push("## Task", "");
 	trace.taskPrompts.forEach((p, i) => {
-		const sessionTag = trace.sessions.length > 1 ? ` [сессия ${p.sessionIndex}]` : "";
+		const sessionTag = trace.sessions.length > 1 ? ` [session ${p.sessionIndex}]` : "";
 		out.push(`**${i + 1}.** ${hhmm(p.timestamp)} @L${p.logLine}${sessionTag}`);
 		for (const line of p.text.split("\n")) out.push(`> ${line}`);
 		out.push("");
@@ -153,34 +153,34 @@ function renderWorkingSet(out: string[], trace: CompressedTrace, fileIndex: File
 		const id = idByPath.get(path);
 		return id !== undefined ? `[F${id}]` : path;
 	};
-	out.push("## Рабочий набор", "");
+	out.push("## Working Set", "");
 	const modified = trace.workingSet.filter((w) => w.modified);
 	const read = trace.workingSet.filter((w) => !w.modified);
 	for (const w of modified) {
 		const diff = w.diff !== undefined ? ` +${w.diff.added}/−${w.diff.removed}` : "";
-		out.push(`- изменён${diff} — ${ref(w.path)} \`${w.path}\` @L${w.modifyRefs.join(", @L")}`);
+		out.push(`- modified${diff} — ${ref(w.path)} \`${w.path}\` @L${w.modifyRefs.join(", @L")}`);
 	}
 	for (const w of read.slice(0, 20)) {
-		out.push(`- читался ×${w.reads} — ${ref(w.path)} \`${w.path}\` @L${w.readRefs.join(", @L")}${w.readRefs.length < w.reads ? " …" : ""}`);
+		out.push(`- read ×${w.reads} — ${ref(w.path)} \`${w.path}\` @L${w.readRefs.join(", @L")}${w.readRefs.length < w.reads ? " …" : ""}`);
 	}
-	if (read.length > 20) out.push(`- …ещё ${read.length - 20} файлов только для чтения`);
+	if (read.length > 20) out.push(`- …${read.length - 20} more read-only files`);
 	out.push("");
 }
 
 function renderTimeline(out: string[], trace: CompressedTrace, fileIndex: FileIndexEntry[]): void {
-	out.push("## Таймлайн", "");
+	out.push("## Timeline", "");
 	let lastSessionIndex = -1;
 	for (const block of trace.blocks) {
 		if (block.sessionIndex !== lastSessionIndex && trace.sessions.length > 1) {
 			const s = trace.sessions[block.sessionIndex - 1];
 			if (s !== undefined) {
-				out.push(`### — сессия ${block.sessionIndex} (\`${s.sessionId.slice(0, 8)}\`) —`, "");
+				out.push(`### — session ${block.sessionIndex} (\`${s.sessionId.slice(0, 8)}\`) —`, "");
 			}
 			lastSessionIndex = block.sessionIndex;
 		}
 		renderBlock(out, block, trace.sessions.length > 1, fileIndex);
 	}
-	if (trace.blocks.length === 0) out.push("_активности нет_", "");
+	if (trace.blocks.length === 0) out.push("_no activity_", "");
 }
 
 function renderBlock(out: string[], block: TimelineBlock, multiSession: boolean, fileIndex: FileIndexEntry[]): void {
@@ -194,8 +194,8 @@ function renderBlock(out: string[], block: TimelineBlock, multiSession: boolean,
 	if (block.refinedSummary !== undefined) out.push(`↳ ${block.refinedSummary}`);
 	const st = block.stats;
 	const statParts = [
-		`вызовов ${st.calls}`,
-		st.errors > 0 ? `ошибок ${st.errors}` : undefined,
+		`calls ${st.calls}`,
+		st.errors > 0 ? `errors ${st.errors}` : undefined,
 		`@L${st.lineFrom}${st.lineTo !== st.lineFrom ? `–L${st.lineTo}` : ""}`,
 	];
 	out.push(`( ${statParts.filter((p) => p !== undefined).join(" · ")} )`, "");
@@ -208,7 +208,7 @@ function renderBlock(out: string[], block: TimelineBlock, multiSession: boolean,
 
 function renderSubagents(out: string[], trace: CompressedTrace): void {
 	if (trace.subagents.length === 0) return;
-	out.push("## Сабагенты", "");
+	out.push("## Subagents", "");
 	for (const s of trace.subagents) {
 		out.push(`- **${s.title}** — ${s.summary}`);
 		const parts = [`origin: ${s.origin}`];
@@ -226,7 +226,7 @@ function renderSubagents(out: string[], trace: CompressedTrace): void {
 
 function renderNotes(out: string[], trace: CompressedTrace): void {
 	if (trace.notes.length === 0) return;
-	out.push("## Заметки", "");
+	out.push("## Notes", "");
 	for (const n of trace.notes) {
 		const sessTag = trace.sessions.length > 1 ? ` [s${n.sessionIndex}]` : "";
 		out.push(`- ${hhmm(n.timestamp)}${sessTag} ${n.text} @L${n.logLine}`);
@@ -244,18 +244,18 @@ function renderRecovery(out: string[], trace: CompressedTrace): void {
 	const multi = trace.sessions.length > 1;
 	out.push("## Trace Recovery", "");
 	out.push(
-		`Всё, что вырезано из этого трейса, остаётся в исходных логах сессий (append-only JSONL).${multi ? " Лог каждой сессии — под своим номером в «Сессиях»." : ""} Способы восстановления:`,
+		`Everything cut from this trace remains in the original session logs (append-only JSONL).${multi ? " Each session's log is listed under its number in the Sessions table." : ""} Recovery methods:`,
 	);
 	out.push(
-		"- томбстон `…⟨N kB, M ln, #hash, @Lстрока⟩` — результат целиком лежит в логе на строке `строка`: `sed -n '<строка>p' <logFile>`; `#hash` (первые 8 hex sha256) сверяет, что нашли именно тот результат;",
+		"- tombstone `…⟨N kB, M ln, #hash, @Lline⟩` — the full result sits in the log at line `line`: `sed -n '<line>p' <logFile>`; `#hash` (first 8 hex of sha256) verifies you found exactly that result;",
 	);
 	out.push(
-		"- маркер `…⟨truncated: A→B chars @Lстрока, sha:#hash⟩` — середина вырезана, head+tail сохранены, полный текст — на строке `строка` того же лога;",
+		"- marker `…⟨truncated: A→B chars @Lline, sha:#hash⟩` — the middle was cut, head+tail kept, the full text is at line `line` of the same log;",
 	);
 	out.push(
-		"- записи — длинный JSON: ищи по ключевому слову (`grep -n keyword <logFile>`), затем читай ровно нужную строку (`sed -n 'Np' <logFile> | jq -r '.message.content[0].text'`);",
+		"- entries are long JSON: search by keyword (`grep -n keyword <logFile>`), then read exactly the line you need (`sed -n 'Np' <logFile> | jq -r '.message.content[0].text'`);",
 	);
-	out.push("- файлы сессии объявлены один раз в «Рабочем наборе» (`[F<id>]`), в таймлайне на них ссылаются по этим индексам.");
+	out.push("- session files are declared once in the Working Set (`[F<id>]`); the timeline references them by these indexes.");
 	out.push("");
 }
 

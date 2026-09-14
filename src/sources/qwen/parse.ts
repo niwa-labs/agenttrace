@@ -246,7 +246,7 @@ function parseSystem(
 		const payload = asRecord(e["systemPayload"]);
 		const info = payload !== undefined ? asRecord(payload["info"]) : undefined;
 		out.push({ kind: "compaction", timestamp: ts, logLine: line, sidechain: false });
-		const parts = ["история сжата компакцией"];
+		const parts = ["history compacted"];
 		if (info !== undefined && typeof info["triggerReason"] === "string") {
 			parts.push(`trigger=${info["triggerReason"]}`);
 		}

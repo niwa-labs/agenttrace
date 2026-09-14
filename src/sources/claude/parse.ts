@@ -452,7 +452,7 @@ function compactBoundaryText(e: Record<string, unknown>): string {
 	} catch {
 		// older logs: content is a plain string
 	}
-	const parts = ["история сжата компакцией"];
+	const parts = ["history compacted"];
 	if (trigger) parts.push(`trigger=${trigger}`);
 	if (pre && post) parts.push(`${pre}→${post} tokens`);
 	return parts.join(", ");

@@ -1,9 +1,14 @@
 {
 	"name": "raiseki",
 	"version": "1.0.0",
-	"description": "Compresses coding-agent session logs (Claude Code, Codex CLI, pi) into token-efficient MD traces with lossless @L references for LLM analysis",
+	"description": "Compresses coding-agent session logs (Claude Code, Codex CLI, pi, Cursor, Qwen Code, Kimi, MiniMax Code) into token-efficient MD traces with lossless @L references for LLM analysis",
 	"type": "module",
 	"license": "MIT",
+	"author": "Niwa Mori",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/minmax/raiseki.git"
+	},
 	"engines": {
 		"node": ">=22.19.0"
 	},
@@ -26,6 +31,10 @@
 	"keywords": [
 		"claude-code",
 		"codex",
+		"qwen-code",
+		"kimi",
+		"minimax",
+		"cursor",
 		"session-log",
 		"context-compression",
 		"agent-traces",

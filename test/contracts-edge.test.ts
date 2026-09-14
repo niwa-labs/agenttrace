@@ -16,11 +16,11 @@ describe("v2 contracts extractJsonObject (edge cases)", () => {
 
 	it("tolerates prose before and after the fenced block", () => {
 		const text = [
-			"Вот результат, как просили:",
+			"Here is the result, as requested:",
 			"```json",
 			'{"arcs": [], "verdict": {"status": "success", "why": "ok"}, "items": []}',
 			"```",
-			"Надеюсь, это поможет!",
+			"Hope this helps!",
 		].join("\n");
 		expect(extractJsonObject(text)).toEqual({
 			arcs: [],

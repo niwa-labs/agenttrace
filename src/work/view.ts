@@ -159,8 +159,8 @@ export async function buildSessionView(
 					anchor: { fromLine: turn.fromLine, toLine: turn.toLine },
 					action:
 						turn.kind === "user"
-							? `Пользователь: ${turn.entries[0]?.kind === "user_text" ? turn.entries[0].text.slice(0, 1200) : "..."}`
-							: `Ход (${turn.toolNames.join(",") || "без вызовов"}) — не сжат моделью [det]`,
+							? `User: ${turn.entries[0]?.kind === "user_text" ? turn.entries[0].text.slice(0, 1200) : "..."}`
+							: `Turn (${turn.toolNames.join(",") || "no calls"}) — not compressed by the model [det]`,
 					thoughts: [],
 				},
 				disputes: [],

@@ -1,6 +1,6 @@
 # raiseki
 
-Takes raw session logs from coding agents (Claude Code, Codex CLI, Cursor, pi) and turns them into short markdown traces that keep the agent's reasoning (thoughts, decisions, mistakes) and drop the bulk (tool output, retries, boilerplate). Every distilled item keeps an `@L<line>` reference to the exact line of the original log. Run it locally against your own LLM endpoint, or hands-off through the built-in work server that external agents drive.
+Takes raw session logs from coding agents (Claude Code, Codex CLI, pi, Cursor, Qwen Code, Kimi, MiniMax Code) and turns them into short markdown traces that keep the agent's reasoning (thoughts, decisions, mistakes) and drop the bulk (tool output, retries, boilerplate). Every distilled item keeps an `@L<line>` reference to the exact line of the original log. Run it locally against your own LLM endpoint, or hands-off through the built-in work server that external agents drive.
 
 ## Quick start
 
@@ -22,7 +22,7 @@ raiseki refine ~/projects/myapp \
 raiseki distill ~/projects/myapp --out traces/myapp --repo-bound
 ```
 
-Both commands discover sessions whose `cwd` in the log matches the given directory or any subdirectory.
+Both commands discover sessions whose `cwd` in the log matches the given directory or any subdirectory. From a repo clone (no global install, no build step) prefix every command with `npm run raiseki --`.
 
 ## What the output looks like
 
@@ -70,10 +70,13 @@ raiseki work finalize --state ~/raiseki-run   # traces/<project>/*.md (private, 
 | Claude Code | usually empty | signature-only blocks |
 | Codex CLI | encrypted | summaries only |
 | pi | full text | richest source |
+| Qwen Code | full text | `thought:true` parts |
+| Kimi CLI / Kimi Code | full text | `wire.jsonl`, two layouts |
+| MiniMax Code (mcode) | full text | `messages.jsonl` |
 | Cursor IDE | `bubble.thinking` | exported from `state.vscdb` (cursorDiskKV) to line-addressable JSONL |
 | cursor-agent CLI | — | exported from `~/.cursor/chats/*/store.db` |
 
-Cursor sources are ingested via the work server (`work init` exports chats to line-addressable JSONL in the state dir); `--source` for `distill`/`refine` accepts `claude,codex,pi`. Traces are assigned to a project from the session's cwd (or the Cursor workspace path) and written under `traces/<project>/`.
+Cursor sources are ingested via the work server (`work init` exports chats to line-addressable JSONL in the state dir); `--source` for `distill`/`refine` accepts `claude,codex,pi,qwen,kimi,minimax`. Traces are assigned to a project from the session's cwd (or the Cursor workspace path) and written under `traces/<project>/`.
 
 ## Models
 

@@ -15,7 +15,6 @@ import { homedir } from "node:os";
 export function toRepoBound(traceMd: string, projectDir?: string, home: string = homedir()): string {
 	let s = traceMd;
 	// truncation tombstones: keep the fact, drop the private pointer
-	s = s.replace(/…⟨урезано, полный текст @L\d+⟩/g, "…⟨truncated⟩");
 	s = s.replace(/…⟨truncated, full text @L\d+⟩/g, "…⟨truncated⟩");
 	// private log pointer line
 	s = s.replace(/^- s1 @L → .*$/gm, "");

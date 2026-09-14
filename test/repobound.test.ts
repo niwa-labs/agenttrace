@@ -26,7 +26,7 @@ describe("toRepoBound", () => {
 		const md = [
 			"- **H** [refuted] bad guess @L101→L175",
 			"💭 ?: keep the anchor? @L",
-			"- сессия @L → pointer line handled separately",
+			"- session @L → pointer line handled separately",
 		].join("\n");
 		const out = toRepoBound(md);
 		expect(out).not.toContain("@L");

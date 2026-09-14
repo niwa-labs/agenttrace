@@ -16,7 +16,7 @@ describe("minimax parser", () => {
 		expect(s.cwd).toBe("/proj/demo");
 		expect(s.role).toBe("main");
 		expect(s.model).toBe("MiniMax-M3");
-		expect(s.firstPrompt).toBe("почини импорт в src/main.ts");
+		expect(s.firstPrompt).toBe("fix the import in src/main.ts");
 		expect(s.logLines).toBe(11); // counts the trailing garbage line too
 	});
 
@@ -50,10 +50,10 @@ describe("minimax parser", () => {
 			(e): e is TextEntry & { kind: "assistant_thinking" } => e.kind === "assistant_thinking",
 		);
 		expect(thoughts.map((t) => t.logLine)).toEqual([2, 7]);
-		expect(thoughts[0]?.text).toContain("Гипотеза: путь ломается из-за tsconfig paths");
-		expect(thoughts[0]?.text).toContain("алиас main указывает на dist.");
+		expect(thoughts[0]?.text).toContain("Hypothesis: the path breaks because of tsconfig paths");
+		expect(thoughts[0]?.text).toContain("the main alias points to dist.");
 		const texts = s.entries.filter((e): e is TextEntry & { kind: "assistant_text" } => e.kind === "assistant_text");
-		expect(texts.map((t) => t.text)).toEqual(["Сейчас посмотрю.", "Готово: импорт исправлен."]);
+		expect(texts.map((t) => t.text)).toEqual(["Looking now.", "Done: import fixed."]);
 	});
 
 	it("pairs tool calls with results by id, maps isError and read filePath", async () => {
@@ -83,8 +83,8 @@ describe("minimax parser", () => {
 		const prompts = s.entries.filter((e): e is TextEntry & { kind: "user_text" } => e.kind === "user_text");
 		// L5 (background-task-finished notice) produced no user_text
 		expect(prompts.map((p) => p.text)).toEqual([
-			"почини импорт в src/main.ts",
-			"продолжай",
+			"fix the import in src/main.ts",
+			"continue",
 		]);
 		// custom role (L6, todo_cadence_reminder) is skipped entirely
 		expect(s.entries.some((e) => e.logLine === 6)).toBe(false);

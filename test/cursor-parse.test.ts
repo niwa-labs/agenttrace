@@ -15,7 +15,7 @@ describe("cursor parser", () => {
 	const meta: CursorLogMeta = {
 		sessionId: "comp-1",
 		source: "cursor-ide",
-		title: "Починить логин",
+		title: "Fix the login",
 		workspacePath: "/proj/demo/apps/dist",
 		createdAt: "2026-07-01T10:00:00.000Z",
 		lastUpdatedAt: "2026-07-01T10:05:00.000Z",
@@ -27,7 +27,7 @@ describe("cursor parser", () => {
 		expect(s.source).toBe("cursor-ide");
 		expect(s.sessionId).toBe("comp-1");
 		expect(s.cwd).toBe("/proj/demo/apps/dist");
-		expect(s.title).toBe("Починить логин");
+		expect(s.title).toBe("Fix the login");
 		expect(s.logLines).toBe(8);
 		expect(s.logBytes).toBeGreaterThan(0);
 		expect(s.role).toBe("main");
@@ -114,8 +114,8 @@ describe("cursor-ide exporter", () => {
 				"tool_result",
 			]);
 			// thinking precedes assistant text within one bubble
-			expect(lines[1]).toMatchObject({ kind: "assistant_thinking", bid: "b2", text: "думаю" });
-			expect(lines[2]).toMatchObject({ kind: "assistant_text", bid: "b2", text: "смотрю" });
+			expect(lines[1]).toMatchObject({ kind: "assistant_thinking", bid: "b2", text: "thinking" });
+			expect(lines[2]).toMatchObject({ kind: "assistant_text", bid: "b2", text: "looking" });
 			// bubble-level toolFormerData: parsed rawArgs, string result
 			expect(lines[3]).toMatchObject({
 				kind: "tool_call",
@@ -156,8 +156,8 @@ describe("cursor-agent exporter", () => {
 		try {
 			const chatsRoot = join(dir, "chats");
 			const wsStorage = join(dir, "workspaceStorage");
-			await seedAgentStore(join(chatsRoot, "ws1", "chat1"), "Agent chat", 1_700_000_000_000, "Workspace Path: /tmp/proj\nпривет");
-			await seedAgentStore(join(chatsRoot, "ws2", "chat2"), undefined, undefined, "без пути");
+			await seedAgentStore(join(chatsRoot, "ws1", "chat1"), "Agent chat", 1_700_000_000_000, "Workspace Path: /tmp/proj\nhello");
+			await seedAgentStore(join(chatsRoot, "ws2", "chat2"), undefined, undefined, "no path");
 			await mkdir(join(wsStorage, "ws1"), { recursive: true });
 			await writeFile(join(wsStorage, "ws1", "workspace.json"), JSON.stringify({ folder: "file:///tmp/proj-actual" }));
 			const outDir = join(dir, "out");
@@ -175,11 +175,11 @@ describe("cursor-agent exporter", () => {
 				"user_text",
 				"assistant_text",
 			]);
-			expect(lines[0]).toMatchObject({ bid: "1", text: "Workspace Path: /tmp/proj\nпривет" });
-			expect(lines[1]).toMatchObject({ bid: "2", text: "думаю" });
-			expect(lines[2]).toMatchObject({ bid: "2", text: "часть1\nчасть2" });
-			expect(lines[3]).toMatchObject({ bid: "4", text: "вложенный" });
-			expect(lines[4]).toMatchObject({ bid: "4", text: "ответ" });
+			expect(lines[0]).toMatchObject({ bid: "1", text: "Workspace Path: /tmp/proj\nhello" });
+			expect(lines[1]).toMatchObject({ bid: "2", text: "thinking" });
+			expect(lines[2]).toMatchObject({ bid: "2", text: "part1\npart2" });
+			expect(lines[3]).toMatchObject({ bid: "4", text: "nested" });
+			expect(lines[4]).toMatchObject({ bid: "4", text: "answer" });
 
 			const meta = JSON.parse(await readFile(join(outDir, "ws1-chat1.meta.json"), "utf8")) as CursorLogMeta;
 			expect(meta).toMatchObject({
@@ -263,8 +263,8 @@ function seedIdeDb(dbPath: string): void {
 		// composerData stored as BLOB to exercise the utf8 decode path
 		insertKv.run("composerData:composer-aaa", Buffer.from(composerData, "utf8"));
 		const bubbles: [string, string][] = [
-			["b1", JSON.stringify({ bubbleId: "b1", type: 1, text: "почини логин", createdAt: "2026-07-01T10:00:00.000Z" })],
-			["b2", JSON.stringify({ bubbleId: "b2", type: 2, text: "смотрю", thinking: { text: "думаю" }, createdAt: "2026-07-01T10:00:05.000Z" })],
+			["b1", JSON.stringify({ bubbleId: "b1", type: 1, text: "fix the login", createdAt: "2026-07-01T10:00:00.000Z" })],
+			["b2", JSON.stringify({ bubbleId: "b2", type: 2, text: "looking", thinking: { text: "thinking" }, createdAt: "2026-07-01T10:00:05.000Z" })],
 			[
 				"b3",
 				JSON.stringify({
@@ -323,10 +323,10 @@ async function seedAgentStore(
 		insertBlob.run("r1", JSON.stringify({ role: "user", content: userText }));
 		insertBlob.run(
 			"r2",
-			JSON.stringify({ role: "assistant", content: [{ type: "text", text: "часть1" }, { type: "text", text: "часть2" }], thinking: "думаю" }),
+			JSON.stringify({ role: "assistant", content: [{ type: "text", text: "part1" }, { type: "text", text: "part2" }], thinking: "thinking" }),
 		);
 		insertBlob.run("r3", Buffer.from([0x00, 0x01, 0x02, 0x03])); // protobuf junk — skipped
-		insertBlob.run("r4", JSON.stringify({ messages: [{ role: "user", content: "вложенный" }, { role: "assistant", content: "ответ" }] }));
+		insertBlob.run("r4", JSON.stringify({ messages: [{ role: "user", content: "nested" }, { role: "assistant", content: "answer" }] }));
 	} finally {
 		db.close();
 	}

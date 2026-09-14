@@ -1,6 +1,6 @@
 /**
  * trace renderer: the final MD document.
- * Body = the grouped compressed form (the "настоящая" reduced replica),
+ * Body = the grouped compressed form (the "true" reduced replica),
  * then SMART arcs, REASONING-INDEX, verdict. Frontmatter = typed meta.
  */
 
@@ -71,21 +71,21 @@ export function renderTrace(input: TraceInput): string {
 function renderBody(input: TraceInput): string {
 	const out: string[] = [];
 	const primary = input.sessions[0];
-	out.push(`# ${primary !== undefined && primary.title !== undefined ? primary.title : cap(primary?.firstPrompt ?? "сессия", 70)}`, "");
+	out.push(`# ${primary !== undefined && primary.title !== undefined ? primary.title : cap(primary?.firstPrompt ?? "session", 70)}`, "");
 	if (primary !== undefined) {
 		out.push(`- s1 @L → ${primary.logFile}`, "");
 	}
 	out.push(
-		"> `@L<n>` — строка `<n>` исходного лога: `sed -n '<n>p' <logFile>`. Форма ниже — сжатая копия сессии (все ходы, мысли сжаты, результаты урезаны).",
+		"> `@L<n>` — line `<n>` of the original log: `sed -n '<n>p' <logFile>`. The form below is a compressed copy of the session (all turns present, thoughts distilled, results truncated).",
 		"",
 	);
 
-	out.push("## Сжатая сессия", "");
+	out.push("## Compressed session", "");
 	out.push(input.groupedForm.trimEnd(), "");
 
 	const pass2 = input.pass2;
 	if (pass2 !== undefined && pass2.arcs.length > 0) {
-		out.push("## Дуги рассуждения", "");
+		out.push("## Reasoning arcs", "");
 		for (const arc of pass2.arcs) {
 			const to = Number.isFinite(arc.toLine) ? `→L${arc.toLine}` : "";
 			out.push(`- **${arc.kind}** [${arc.status}] ${arc.text} @L${arc.fromLine}${to}`);
@@ -97,12 +97,12 @@ function renderBody(input: TraceInput): string {
 	if (pass2 !== undefined) {
 		out.push(`**${pass2.verdict.status}** — ${pass2.verdict.why} _(agent)_`, "");
 	} else {
-		out.push(`_pass-2 не выполнен — см. метрики и детерминированные факты_`, "");
+		out.push(`_pass-2 not run — see metrics and deterministic facts_`, "");
 	}
 
 	// ---- session accounting: what we can compute ourselves ----
 	if (primary !== undefined) {
-		out.push("## Учёт сессии", "");
+		out.push("## Session accounting", "");
 		const wallMs = Math.max(0, Date.parse(primary.endedAt) - Date.parse(primary.startedAt));
 		const resumeHint =
 			primary.source === "claude"
@@ -111,33 +111,33 @@ function renderBody(input: TraceInput): string {
 					? `codex resume ${primary.sessionId}`
 					: `pi --session ${primary.sessionId}`;
 		out.push(`- session: \`${primary.sessionId.slice(0, 8)}\` (${primary.source}) · resume: \`${resumeHint}\``);
-		out.push(`- окно: ${hhms(primary.startedAt)} → ${hhms(primary.endedAt)} (wall ${fmtDur(wallMs)}${primary.activeMs !== undefined ? `, активная работа ~${fmtDur(primary.activeMs)}` : ""})`);
+		out.push(`- window: ${hhms(primary.startedAt)} → ${hhms(primary.endedAt)} (wall ${fmtDur(wallMs)}${primary.activeMs !== undefined ? `, active work ~${fmtDur(primary.activeMs)}` : ""})`);
 		const stats = input.turnStats;
 		if (stats !== undefined) {
 			const total = stats.toolCalls;
 			const ok = total - stats.toolErrors;
 			const rate = total > 0 ? Math.round((ok / total) * 1000) / 10 : 100;
 			out.push(
-				`- вызовы: ${total} (ok ${ok}, err ${stats.toolErrors}; success rate ${rate}%)${stats.interrupted > 0 ? ` · прервано: ${stats.interrupted}` : ""}`,
+				`- calls: ${total} (ok ${ok}, err ${stats.toolErrors}; success rate ${rate}%)${stats.interrupted > 0 ? ` · interrupted: ${stats.interrupted}` : ""}`,
 			);
 			if (stats.diffAdded > 0 || stats.diffRemoved > 0) {
-				out.push(`- правки: +${stats.diffAdded}/−${stats.diffRemoved} в ${stats.filesModified} файлах`);
+				out.push(`- edits: +${stats.diffAdded}/−${stats.diffRemoved} in ${stats.filesModified} files`);
 			}
 			if (stats.checks !== undefined) {
-				out.push(`- проверки: ${stats.checks.run} run / ${stats.checks.failed} failed`);
+				out.push(`- checks: ${stats.checks.run} run / ${stats.checks.failed} failed`);
 			}
-			if (stats.compactions > 0) out.push(`- компакций истории: ${stats.compactions}`);
+			if (stats.compactions > 0) out.push(`- history compactions: ${stats.compactions}`);
 		}
 		const usage = primary.tokenUsage;
 		if (usage !== undefined) {
-			out.push(`- модель: \`${primary.model ?? "?"}\` · запросов ${usage.requests}`);
+			out.push(`- model: \`${primary.model ?? "?"}\` · requests ${usage.requests}`);
 			out.push(
-				`- токены: in ${fmtNum(usage.inputTokens)} (cache read ${fmtNum(usage.cacheReadTokens)}, write ${fmtNum(usage.cacheWriteTokens)}) · out ${fmtNum(usage.outputTokens)}${usage.reasoningTokens > 0 ? ` · reasoning ${fmtNum(usage.reasoningTokens)}` : ""}${usage.costUsd !== undefined ? ` · $${usage.costUsd.toFixed(2)}` : ""}`,
+				`- tokens: in ${fmtNum(usage.inputTokens)} (cache read ${fmtNum(usage.cacheReadTokens)}, write ${fmtNum(usage.cacheWriteTokens)}) · out ${fmtNum(usage.outputTokens)}${usage.reasoningTokens > 0 ? ` · reasoning ${fmtNum(usage.reasoningTokens)}` : ""}${usage.costUsd !== undefined ? ` · $${usage.costUsd.toFixed(2)}` : ""}`,
 			);
 			const totalIn = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
 			if (totalIn > 0 && usage.cacheReadTokens / totalIn > 0.1) {
 				out.push(
-					`- кэш: ${Math.round((usage.cacheReadTokens / totalIn) * 100)}% входных токенов из кэша`,
+					`- cache: ${Math.round((usage.cacheReadTokens / totalIn) * 100)}% of input tokens served from cache`,
 				);
 			}
 		}
@@ -146,12 +146,12 @@ function renderBody(input: TraceInput): string {
 
 	const m = input.metrics;
 	out.push(
-		"## Метрики прохода",
+		"## Pass metrics",
 		"",
-		`ходов ${m.turns} · покрытие ${m.coverage} · fallback ${m.blocksFallback} · det-only ${m.detOnly} · ретраев ${m.retries} · споров ${m.disputes}`,
-		`мысли: source ${JSON.stringify(m.thoughtsBySource)} · kind ${JSON.stringify(m.thoughtsByKind)}`,
-		`исходник ${m.tokensOriginal} tok → сжатая форма ${m.tokensCompressed} tok (×${m.compressionRatio})`,
-		`read_log ×${m.readLogCalls} · pass2 ретраев ${m.pass2Retries}`,
+		`turns ${m.turns} · coverage ${m.coverage} · fallback ${m.blocksFallback} · det-only ${m.detOnly} · retries ${m.retries} · disputes ${m.disputes}`,
+		`thoughts: source ${JSON.stringify(m.thoughtsBySource)} · kind ${JSON.stringify(m.thoughtsByKind)}`,
+		`original ${m.tokensOriginal} tok → compressed form ${m.tokensCompressed} tok (×${m.compressionRatio})`,
+		`read_log ×${m.readLogCalls} · pass2 retries ${m.pass2Retries}`,
 		"",
 	);
 	return out.join("\n");
