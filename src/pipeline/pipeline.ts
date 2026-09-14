@@ -18,6 +18,8 @@ import { parseKimiSession } from "../sources/kimi/parse.js";
 import { discoverPiSessions } from "../sources/pi/discover.js";
 import { discoverQwenSessions } from "../sources/qwen/discover.js";
 import { discoverKimiSessions } from "../sources/kimi/discover.js";
+import { parseMinimaxSession } from "../sources/minimax/parse.js";
+import { discoverMinimaxSessions } from "../sources/minimax/discover.js";
 import { parsePiSession } from "../sources/pi/parse.js";
 import { DEFAULT_SEGMENT_OPTIONS, packWindows, segmentTurns, type Turn } from "./turns.js";
 import { anchorTurn, type TurnAnchors } from "./anchors.js";
@@ -380,6 +382,9 @@ async function discoverSessions(rootDir: string, sources: SourceKind[], only?: s
 	if (sources.includes("kimi")) {
 		for (const f of await discoverKimiSessions(rootDir)) files.push({ file: f.logFile, source: "kimi" });
 	}
+	if (sources.includes("minimax")) {
+		for (const f of await discoverMinimaxSessions(undefined, rootDir)) files.push({ file: f.file, source: "minimax" });
+	}
 	const picked = only !== undefined ? files.filter((f) => f.file.includes(only)) : files;
 	const sessions: NormalizedSession[] = [];
 	for (const { file, source } of picked) {
@@ -391,8 +396,10 @@ async function discoverSessions(rootDir: string, sources: SourceKind[], only?: s
 						? await parseCodexSession(file)
 						: source === "qwen"
 							? await parseQwenSession(file)
-							: source === "kimi"
-								? await parseKimiSession(file)
+						: source === "kimi"
+							? await parseKimiSession(file)
+							: source === "minimax"
+								? await parseMinimaxSession(file)
 								: await parsePiSession(file),
 			);
 		} catch (err) {

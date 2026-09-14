@@ -14,6 +14,8 @@ import { discoverQwenSessions } from "../sources/qwen/discover.js";
 import { parseQwenSession } from "../sources/qwen/parse.js";
 import { discoverKimiSessions } from "../sources/kimi/discover.js";
 import { parseKimiSession } from "../sources/kimi/parse.js";
+import { discoverMinimaxSessions } from "../sources/minimax/discover.js";
+import { parseMinimaxSession } from "../sources/minimax/parse.js";
 import { distill, DEFAULT_DISTILL_OPTIONS } from "../base/trace-builder.js";
 import type { ChainOptions } from "../base/chain.js";
 import { renderTraceMd } from "../base/render-md.js";
@@ -73,6 +75,10 @@ export async function runDistill(opts: DistillRunOptions): Promise<DistillReport
 	if (opts.sources.includes("kimi")) {
 		for (const f of await discoverKimiSessions(opts.rootDir)) logFiles.push({ file: f.logFile, source: "kimi" });
 	}
+	if (opts.sources.includes("minimax")) {
+		for (const f of await discoverMinimaxSessions(undefined, opts.rootDir))
+			logFiles.push({ file: f.file, source: "minimax" });
+	}
 	const only = opts.only;
 	const picked = only !== undefined ? logFiles.filter((f) => f.file.includes(only)) : logFiles;
 
@@ -86,8 +92,10 @@ export async function runDistill(opts: DistillRunOptions): Promise<DistillReport
 						? await parseCodexSession(file)
 						: source === "qwen"
 							? await parseQwenSession(file)
-							: source === "kimi"
-								? await parseKimiSession(file)
+						: source === "kimi"
+							? await parseKimiSession(file)
+							: source === "minimax"
+								? await parseMinimaxSession(file)
 								: await parsePiSession(file),
 			);
 		} catch (err) {

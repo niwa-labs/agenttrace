@@ -17,6 +17,8 @@ import { slugify } from "../base/naming.js";
 import type { SourceKind } from "../model/session.js";
 import type { CursorLogMeta } from "../sources/cursor/types.js";
 import { discoverQwenLogs } from "../sources/qwen/discover.js";
+import { discoverKimiSessions } from "../sources/kimi/discover.js";
+import { discoverMinimaxSessions } from "../sources/minimax/discover.js";
 import { listCursorLogs } from "../sources/cursor/discover.js";
 import type { WorkPaths, WorkState } from "./state.js";
 
@@ -130,6 +132,12 @@ export async function inventorySessions(paths: WorkPaths, state: WorkState): Pro
 	for (const root of state.roots.codex) for (const f of await listJsonlLogs(root)) add("codex", f);
 	for (const root of state.roots.pi) for (const f of await listJsonlLogs(root)) add("pi", f);
 	for (const root of state.roots.qwen ?? []) for (const f of await discoverQwenLogs(root)) add("qwen", f);
+	for (const dir of state.roots.kimiCode ?? [])
+		for (const f of await discoverKimiSessions(undefined, dir, null)) add("kimi", f.logFile);
+	for (const dir of state.roots.kimi ?? [])
+		for (const f of await discoverKimiSessions(undefined, null, dir)) add("kimi", f.logFile);
+	for (const dir of state.roots.minimax ?? [])
+		for (const f of await discoverMinimaxSessions(dir)) add("minimax", f.file);
 	if (state.cursorIde !== null) {
 		for (const { file, meta } of await listCursorLogs(join(paths.stateDir, state.cursorIde.out))) {
 			add("cursor-ide", file, meta);

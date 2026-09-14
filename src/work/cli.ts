@@ -17,6 +17,8 @@
 import { parseArgs } from "node:util";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { DEFAULT_KIMI_CODE_SESSIONS_DIR, DEFAULT_KIMI_SESSIONS_DIR } from "../sources/kimi/discover.js";
+import { DEFAULT_MINIMAX_SESSIONS_DIR } from "../sources/minimax/discover.js";
 import { runInit } from "./init.js";
 import { claimJob, listLayerPage, releaseJob, statusSummary, type Layer } from "./jobs.js";
 import { submitJob } from "./submit.js";
@@ -47,6 +49,9 @@ export async function runWorkCli(argv: string[]): Promise<number> {
 						"codex-root": { type: "string", multiple: true },
 						"pi-root": { type: "string", multiple: true },
 						"qwen-root": { type: "string", multiple: true },
+						"kimi-code-sessions": { type: "string", multiple: true },
+						"kimi-sessions": { type: "string", multiple: true },
+						"minimax-root": { type: "string", multiple: true },
 						"no-cursor": { type: "boolean", default: false },
 						"cursor-ide-db": { type: "string" },
 						"cursor-agent-root": { type: "string" },
@@ -64,6 +69,9 @@ export async function runWorkCli(argv: string[]): Promise<number> {
 				state.roots.codex = (strs(values["codex-root"]) ?? []).map(expand);
 				state.roots.pi = piRoots.map(expand);
 				state.roots.qwen = (strs(values["qwen-root"]) ?? [join(homedir(), ".qwen", "projects")]).map(expand);
+				state.roots.kimiCode = (strs(values["kimi-code-sessions"]) ?? [DEFAULT_KIMI_CODE_SESSIONS_DIR]).map(expand);
+				state.roots.kimi = (strs(values["kimi-sessions"]) ?? [DEFAULT_KIMI_SESSIONS_DIR]).map(expand);
+				state.roots.minimax = (strs(values["minimax-root"]) ?? [DEFAULT_MINIMAX_SESSIONS_DIR]).map(expand);
 				if (values["no-cursor"] !== true) {
 					state.cursorIde = {
 						db: expand(str(values["cursor-ide-db"]) ?? join(homedir(), "Library", "Application Support", "Cursor", "User", "globalStorage", "state.vscdb")),
@@ -237,6 +245,9 @@ function printWorkUsage(): void {
       --codex-root <dir> ...     корни логов codex (по умолчанию выключены)
       --pi-root <dir> ...        корни логов pi (~/.pi/agent/sessions)
       --qwen-root <dir> ...      корень логов qwen (~/.qwen/projects)
+      --kimi-code-sessions <dir> ...  корни логов kimi-code (~/.kimi-code/sessions)
+      --kimi-sessions <dir> ...  корни логов kimi CLI (~/.kimi/sessions)
+      --minimax-root <dir> ...   корень логов minimax/mcode (~/.minimax/v2/sessions)
       --no-cursor                не импортировать Cursor (IDE + agent CLI)
       --only <substr>            оставить в реестре только логи с подстрокой
   raiseki work status --state <dir>                    счётчики по слоям/проектам

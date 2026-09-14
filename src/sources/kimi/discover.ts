@@ -47,7 +47,8 @@ export interface KimiSessionRef {
 }
 
 /**
- * Discover kimi / kimi-code wire logs under both default roots (or explicit ones).
+ * Discover kimi / kimi-code wire logs under both default roots (or explicit ones;
+ * pass `null` to skip a layout).
  *
  * When `rootDir` is given, refs are filtered to sessions whose workdir matches the
  * root (exact `workDir`, or the decoded basename hint for kimi-code layouts).
@@ -57,12 +58,12 @@ export interface KimiSessionRef {
  */
 export async function discoverKimiSessions(
 	rootDir?: string,
-	kimiCodeDir: string = DEFAULT_KIMI_CODE_SESSIONS_DIR,
-	kimiDir: string = DEFAULT_KIMI_SESSIONS_DIR,
+	kimiCodeDir?: string | null,
+	kimiDir?: string | null,
 ): Promise<KimiSessionRef[]> {
 	const refs: KimiSessionRef[] = [];
-	await collectKimiCodeRefs(kimiCodeDir, refs);
-	await collectKimiRefs(kimiDir, refs);
+	if (kimiCodeDir !== null) await collectKimiCodeRefs(kimiCodeDir ?? DEFAULT_KIMI_CODE_SESSIONS_DIR, refs);
+	if (kimiDir !== null) await collectKimiRefs(kimiDir ?? DEFAULT_KIMI_SESSIONS_DIR, refs);
 	const out: KimiSessionRef[] = [];
 	const root = rootDir?.replace(/\/+$/, "");
 	for (const ref of refs) {

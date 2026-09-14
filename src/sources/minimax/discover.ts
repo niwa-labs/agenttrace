@@ -32,12 +32,25 @@ export interface MinimaxSessionRef {
 }
 
 /** Recursively find Minimax session logs (`messages.jsonl`) under `sessionsDir`. */
+/** Recursively find Minimax session logs (`messages.jsonl`) under `sessionsDir`;
+ *  with `rootDir`, keep only sessions whose sniffed workspace equals it or lies
+ *  beneath it (sessions with no detectable workspace are kept, mirroring kimi). */
 export async function discoverMinimaxSessions(
 	sessionsDir: string = DEFAULT_MINIMAX_SESSIONS_DIR,
+	rootDir?: string,
 ): Promise<MinimaxSessionRef[]> {
 	const refs: MinimaxSessionRef[] = [];
 	await walk(sessionsDir, refs);
-	return refs.sort((a, b) => a.file.localeCompare(b.file));
+	const root = rootDir?.replace(/\/+$/, "");
+	const out =
+		root !== undefined && root !== ""
+			? refs.filter((r) => r.projectDir === undefined || isUnderDir(r.projectDir, root))
+			: refs;
+	return out.sort((a, b) => a.file.localeCompare(b.file));
+}
+
+function isUnderDir(dir: string, root: string): boolean {
+	return dir === root || dir.startsWith(`${root}/`);
 }
 
 async function walk(dir: string, out: MinimaxSessionRef[]): Promise<void> {

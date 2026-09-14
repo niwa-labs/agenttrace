@@ -27,6 +27,11 @@ export function toRepoBound(traceMd: string, projectDir?: string, home: string =
 	// as noise, and without the log there is nothing to point at
 	s = s.replace(/ ?@L\d+(?:(?:–|→|-\|?)L\d+)?/g, "");
 	s = s.replace(/ ?@L(?=[^\w]|\b)/g, "");
+	// the recovery footer teaches how to dereference @L against the original
+	// log — meaningless when the log is not published; drop to end of section
+	s = s.replace(/^## Trace Recovery$(?:\n(?!## )[^]*)?/gm, "");
+	// tombstone leftovers: `…⟨44.0kB, 711 ln, #88f29e05,⟩` → drop the dangling comma
+	s = s.replace(/,⟨/g, " ⟨").replace(/, ?⟩/g, "⟩");
 	// absolute project paths → repo-relative
 	if (projectDir) {
 		const clean = projectDir.replace(/\/+$/, "");

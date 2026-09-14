@@ -8,7 +8,8 @@
  * every thought-bearing entry shows its quote-id; sealed facts are NOT shown.
  */
 
-import { headTail, capBlock } from "../core/text.js";
+import { capBlock, truncateCentered } from "../core/text.js";
+import { shortHash } from "../core/refs.js";
 import type { SessionEntry } from "../model/session.js";
 import type { TurnAnchors } from "./anchors.js";
 import type { Turn } from "./turns.js";
@@ -75,12 +76,14 @@ export function renderTurn(turn: Turn, anchors: TurnAnchors, opts: TurnRenderOpt
 				break;
 			}
 			case "tool_result": {
-				const body = headTail(e.content, { head: opts.resultHead, tail: opts.resultTail });
+				const t = truncateCentered(e.content, {
+					head: opts.resultHead,
+					tail: opts.resultTail,
+					anchor: e.logLine,
+					sha: shortHash(e.content),
+				});
 				const status = e.isError ? "ERR" : "ok";
-				const cut = e.content.length > opts.resultHead + opts.resultTail
-					? ` …⟨урезано, полный текст @L${e.logLine}⟩`
-					: "";
-				lines.push(`[RESULT ${status}]${cut} ${collapse(body)}`);
+				lines.push(`[RESULT ${status}] ${collapse(t.text)}`);
 				break;
 			}
 			case "system_note":

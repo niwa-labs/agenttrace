@@ -49,14 +49,47 @@ function renderBody(trace: CompressedTrace, title: string): string {
 		);
 	}
 
+	const fileIndex = buildFileIndex(trace);
 	renderSessionsTable(out, trace);
 	renderVerdict(out, trace);
 	renderTask(out, trace);
-	renderWorkingSet(out, trace);
-	renderTimeline(out, trace);
+	renderWorkingSet(out, trace, fileIndex);
+	renderTimeline(out, trace, fileIndex);
 	renderSubagents(out, trace);
 	renderNotes(out, trace);
+	renderRecovery(out, trace);
 	return out.join("\n");
+}
+
+export interface FileIndexEntry {
+	id: number;
+	path: string;
+	modified: boolean;
+}
+
+/**
+ * Deterministic declaration table for file paths (pi-style file-ops index):
+ * modified files get the lowest ids (sorted by path), read-only files follow.
+ * The body references paths as `[F<n>]` — each full path appears exactly once.
+ */
+export function buildFileIndex(trace: CompressedTrace): FileIndexEntry[] {
+	const modified = trace.workingSet.filter((w) => w.modified).map((w) => w.path).sort();
+	const read = trace.workingSet.filter((w) => !w.modified).map((w) => w.path).sort();
+	const out: FileIndexEntry[] = [];
+	let id = 1;
+	for (const path of modified) out.push({ id: id++, path, modified: true });
+	for (const path of read) out.push({ id: id++, path, modified: false });
+	return out;
+}
+
+/** Replace full indexed paths with `[F<n>]` refs (longest first, no prefix collisions). */
+export function substituteFileRefs(text: string, fileIndex: FileIndexEntry[]): string {
+	if (fileIndex.length === 0) return text;
+	let out = text;
+	for (const entry of [...fileIndex].sort((a, b) => b.path.length - a.path.length)) {
+		out = out.split(entry.path).join(`[F${entry.id}]`);
+	}
+	return out;
 }
 
 function renderSessionsTable(out: string[], trace: CompressedTrace): void {
@@ -113,23 +146,28 @@ function renderTask(out: string[], trace: CompressedTrace): void {
 	});
 }
 
-function renderWorkingSet(out: string[], trace: CompressedTrace): void {
+function renderWorkingSet(out: string[], trace: CompressedTrace, fileIndex: FileIndexEntry[]): void {
 	if (trace.workingSet.length === 0) return;
+	const idByPath = new Map(fileIndex.map((f) => [f.path, f.id] as const));
+	const ref = (path: string): string => {
+		const id = idByPath.get(path);
+		return id !== undefined ? `[F${id}]` : path;
+	};
 	out.push("## Рабочий набор", "");
 	const modified = trace.workingSet.filter((w) => w.modified);
 	const read = trace.workingSet.filter((w) => !w.modified);
 	for (const w of modified) {
 		const diff = w.diff !== undefined ? ` +${w.diff.added}/−${w.diff.removed}` : "";
-		out.push(`- изменён${diff} — \`${w.path}\` @L${w.modifyRefs.join(", @L")}`);
+		out.push(`- изменён${diff} — ${ref(w.path)} \`${w.path}\` @L${w.modifyRefs.join(", @L")}`);
 	}
 	for (const w of read.slice(0, 20)) {
-		out.push(`- читался ×${w.reads} — \`${w.path}\` @L${w.readRefs.join(", @L")}${w.readRefs.length < w.reads ? " …" : ""}`);
+		out.push(`- читался ×${w.reads} — ${ref(w.path)} \`${w.path}\` @L${w.readRefs.join(", @L")}${w.readRefs.length < w.reads ? " …" : ""}`);
 	}
 	if (read.length > 20) out.push(`- …ещё ${read.length - 20} файлов только для чтения`);
 	out.push("");
 }
 
-function renderTimeline(out: string[], trace: CompressedTrace): void {
+function renderTimeline(out: string[], trace: CompressedTrace, fileIndex: FileIndexEntry[]): void {
 	out.push("## Таймлайн", "");
 	let lastSessionIndex = -1;
 	for (const block of trace.blocks) {
@@ -140,12 +178,12 @@ function renderTimeline(out: string[], trace: CompressedTrace): void {
 			}
 			lastSessionIndex = block.sessionIndex;
 		}
-		renderBlock(out, block, trace.sessions.length > 1);
+		renderBlock(out, block, trace.sessions.length > 1, fileIndex);
 	}
 	if (trace.blocks.length === 0) out.push("_активности нет_", "");
 }
 
-function renderBlock(out: string[], block: TimelineBlock, multiSession: boolean): void {
+function renderBlock(out: string[], block: TimelineBlock, multiSession: boolean, fileIndex: FileIndexEntry[]): void {
 	const label = LABEL_TITLES[block.label] ?? block.label;
 	const sessTag = multiSession ? ` s${block.sessionIndex}` : "";
 	out.push(
@@ -161,9 +199,9 @@ function renderBlock(out: string[], block: TimelineBlock, multiSession: boolean)
 		`@L${st.lineFrom}${st.lineTo !== st.lineFrom ? `–L${st.lineTo}` : ""}`,
 	];
 	out.push(`( ${statParts.filter((p) => p !== undefined).join(" · ")} )`, "");
-	for (const tool of block.tools) out.push(`- ${tool.text}`);
+	for (const tool of block.tools) out.push(`- ${substituteFileRefs(tool.text, fileIndex)}`);
 	if (block.assistantText !== undefined) {
-		out.push("", `→ ${block.assistantText.replace(/\n/g, " ")}`);
+		out.push("", `→ ${substituteFileRefs(block.assistantText.replace(/\n/g, " "), fileIndex)}`);
 	}
 	out.push("");
 }
@@ -193,6 +231,31 @@ function renderNotes(out: string[], trace: CompressedTrace): void {
 		const sessTag = trace.sessions.length > 1 ? ` [s${n.sessionIndex}]` : "";
 		out.push(`- ${hhmm(n.timestamp)}${sessTag} ${n.text} @L${n.logLine}`);
 	}
+	out.push("");
+}
+
+/**
+ * Self-describing recovery section (kimi-code pattern): teaches any reader —
+ * human or agent — how to expand the compressed view back to 100% using the
+ * append-only original logs. Stripped in the repo-bound flavor (originals are
+ * not published).
+ */
+function renderRecovery(out: string[], trace: CompressedTrace): void {
+	const multi = trace.sessions.length > 1;
+	out.push("## Trace Recovery", "");
+	out.push(
+		`Всё, что вырезано из этого трейса, остаётся в исходных логах сессий (append-only JSONL).${multi ? " Лог каждой сессии — под своим номером в «Сессиях»." : ""} Способы восстановления:`,
+	);
+	out.push(
+		"- томбстон `…⟨N kB, M ln, #hash, @Lстрока⟩` — результат целиком лежит в логе на строке `строка`: `sed -n '<строка>p' <logFile>`; `#hash` (первые 8 hex sha256) сверяет, что нашли именно тот результат;",
+	);
+	out.push(
+		"- маркер `…⟨truncated: A→B chars @Lстрока, sha:#hash⟩` — середина вырезана, head+tail сохранены, полный текст — на строке `строка` того же лога;",
+	);
+	out.push(
+		"- записи — длинный JSON: ищи по ключевому слову (`grep -n keyword <logFile>`), затем читай ровно нужную строку (`sed -n 'Np' <logFile> | jq -r '.message.content[0].text'`);",
+	);
+	out.push("- файлы сессии объявлены один раз в «Рабочем наборе» (`[F<id>]`), в таймлайне на них ссылаются по этим индексам.");
 	out.push("");
 }
 

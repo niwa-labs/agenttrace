@@ -8,7 +8,6 @@
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type { SourceKind } from "../model/session.js";
 
 export const WORK_SCHEMA_VERSION = 1;
 
@@ -18,7 +17,17 @@ export interface WorkState {
 	schemaVersion: number;
 	createdAt: string;
 	/** log roots to inventory (each is a `<kind>-projects`-style dir) */
-	roots: { claude: string[]; codex: string[]; pi: string[]; qwen?: string[]; kimi?: string[]; minimax?: string[] };
+	roots: {
+		claude: string[];
+		codex: string[];
+		pi: string[];
+		qwen?: string[];
+		/** kimi-code CLI session dirs (`~/.kimi-code/sessions`) */
+		kimiCode?: string[];
+		/** kimi CLI session dirs (`~/.kimi/sessions`) */
+		kimi?: string[];
+		minimax?: string[];
+	};
 	cursorIde: { db: string; out: string } | null;
 	cursorAgent: { chatsRoot: string; workspaceStorageDir: string; out: string } | null;
 	segOptions: { turnBudgetTokens: number; windowBudgetTokens: number };
@@ -85,15 +94,4 @@ export async function loadState(paths: WorkPaths): Promise<WorkState> {
 		throw new Error(`state schema ${String(state.schemaVersion)} != ${WORK_SCHEMA_VERSION} — rerun "work init"`);
 	}
 	return state;
-}
-
-/** Sources enabled in this run (cursor kinds map to exported logs). */
-export function enabledSources(state: WorkState): SourceKind[] {
-	const out: SourceKind[] = [];
-	if (state.roots.claude.length > 0) out.push("claude");
-	if (state.roots.codex.length > 0) out.push("codex");
-	if (state.roots.pi.length > 0) out.push("pi");
-	if (state.cursorIde !== null) out.push("cursor-ide");
-	if (state.cursorAgent !== null) out.push("cursor-agent");
-	return out;
 }

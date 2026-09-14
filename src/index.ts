@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * raiseki — compress coding-agent session logs (Claude / Codex / pi)
- * into token-efficient, losslessly-referenced MD traces.
+ * raiseki — compress coding-agent session logs (claude, codex, pi, qwen,
+ * kimi, minimax; cursor via the work server) into token-efficient,
+ * losslessly-referenced MD traces.
  *
  *   raiseki distill [rootDir]  — deterministic base trace (fast, no LLM)
  *   raiseki refine  [rootDir]  — full pipeline: streaming FAST pass + SMART pass + bank
@@ -23,7 +24,6 @@ interface Parsed {
 
 const COMMON_OPTIONS = {
 	out: { type: "string" },
-	source: { type: "string", default: "claude,codex" },
 	only: { type: "string" },
 	max: { type: "string" },
 	model: { type: "string", default: process.env["RAISEKI_MODEL"] ?? "anthropic/claude-sonnet-4-5" },
@@ -49,12 +49,14 @@ function parse(): Parsed {
 		command === "distill"
 			? {
 					...COMMON_OPTIONS,
+					source: { type: "string", default: "claude,codex" },
 					"no-chain": { type: "boolean", default: false },
 					"chain-gap": { type: "string", default: "45" },
 					"repo-bound": { type: "boolean", default: false },
 				}
 			: {
 					...COMMON_OPTIONS,
+					source: { type: "string", default: "claude,codex,pi" },
 					"window-tokens": { type: "string", default: "40000" },
 					"turn-tokens": { type: "string", default: "8000" },
 				};
@@ -72,7 +74,7 @@ function printUsage(): void {
 Использование:
   raiseki distill [rootDir] [options]     детерминированный трейс-скелет (без LLM)
     --out <dir>          куда писать (по умолчанию ./traces)
-    --source <list>      claude,codex,pi (по умолчанию claude,codex)
+    --source <list>      claude,codex,pi,qwen,kimi,minimax (по умолчанию claude,codex)
     --no-chain           не сливать связанные сессии
     --chain-gap <min>    зазор для слияния, минут (45)
     --repo-bound         вариант для коммита в репозиторий: без @L-якорей и абсолютных путей
@@ -84,7 +86,7 @@ function printUsage(): void {
     --api-key <key>      ключ ($RAISEKI_API_KEY, по умолчанию stub)
     --window-tokens <n>  окно pass-1 в токенах (40000)
     --turn-tokens <n>    бюджет хода (8000)
-    --source <list>      claude,codex,pi
+    --source <list>      claude,codex,pi,qwen,kimi,minimax (по умолчанию claude,codex,pi)
     --max <n> / --only <substr>
 
 Общее: обе команды матчат сессии по cwd (текущая директория и поддиры).

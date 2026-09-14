@@ -2,7 +2,6 @@ import { basename, dirname } from "node:path";
 import type {
 	NormalizedSession,
 	SessionEntry,
-	SourceKind,
 	UsageAgg,
 } from "../../model/session.js";
 import { emptyUsage } from "../../model/session.js";
@@ -30,9 +29,6 @@ import { sessionIdFromDirName } from "./discover.js";
  * of each new turn gets the `turnStart` block-split hint (compaction notes
  * never claim it: the next real user prompt opens the continued exchange).
  */
-
-// TODO(integration): add "minimax" to SourceKind in src/model/session.ts — cast until then.
-const MINIMAX_SOURCE = "minimax" as unknown as SourceKind;
 
 /** Machine envelope tags that prefix user texts; matched closers are derived. */
 const NOISE_ENVELOPES = ["<system-reminder>", "<background-task-finished>"];
@@ -104,7 +100,7 @@ export async function parseMinimaxSession(file: string): Promise<NormalizedSessi
 	}
 
 	return {
-		source: MINIMAX_SOURCE,
+		source: "minimax",
 		sessionId,
 		logFile: file,
 		logLines: lastLine,

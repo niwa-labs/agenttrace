@@ -2,7 +2,6 @@ import { basename } from "node:path";
 import type {
 	NormalizedSession,
 	SessionEntry,
-	SourceKind,
 	UsageAgg,
 } from "../../model/session.js";
 import { emptyUsage } from "../../model/session.js";
@@ -25,9 +24,6 @@ import { fileSize, readJsonl } from "../jsonl.js";
  *   `chat_compression` (compaction: originalTokenCount → newTokenCount) and
  *   `session_model` (modelId when assistant lines carry no model).
  */
-
-// TODO(integration): add "qwen" to SourceKind in src/model/session.ts — cast until then.
-const QWEN_SOURCE = "qwen" as unknown as SourceKind;
 
 /** system subtypes that are pure telemetry — never trace-worthy. */
 const NOISY_SYSTEM_SUBTYPES = new Set([
@@ -97,7 +93,7 @@ export async function parseQwenSession(file: string): Promise<NormalizedSession>
 	}
 
 	return {
-		source: QWEN_SOURCE,
+		source: "qwen",
 		sessionId,
 		logFile: file,
 		logLines: lastLine,
